@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VivaLar — Painel do corretor</title>
+  <meta name="description" content="Área administrativa VivaLar: cadastrar, editar e excluir imóveis do catálogo.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="logo" href="index.html"><span class="logo__mark">V</span><span>Viva<em>Lar</em></span></a>
+      <span class="topbar__tag">Painel do corretor</span>
+      <nav class="topbar__nav">
+        <a href="index.html" target="_blank" rel="noopener">Ver site</a>
+        <button id="btnSair" type="button" hidden>Sair</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ===== Login ===== -->
+    <section id="loginView" class="login" hidden>
+      <form class="login__card" id="loginForm" novalidate>
+        <h1>Acesso restrito</h1>
+        <p>Entre com suas credenciais de corretor para gerenciar o catálogo.</p>
+        <div class="field">
+          <label for="loginUser">Usuário</label>
+          <input type="text" id="loginUser" autocomplete="username" placeholder="admin" required>
+        </div>
+        <div class="field">
+          <label for="loginPass">Senha</label>
+          <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••" required>
+        </div>
+        <p class="login__error" id="loginError" role="alert" hidden></p>
+        <button class="btn btn--primary btn--block" type="submit">Entrar no painel</button>
+        <p class="login__hint">Acesso demo — usuário: <strong>admin</strong> · senha: <strong>viva123</strong></p>
+      </form>
+    </section>
+
+    <!-- ===== Dashboard ===== -->
+    <section id="dashView" hidden>
+      <div class="stats">
+        <div class="stat"><span>Total de imóveis</span><strong id="stTotal">0</strong></div>
+        <div class="stat"><span>À venda</span><strong id="stVenda">0</strong></div>
+        <div class="stat"><span>Para alugar</span><strong id="stAluguel">0</strong></div>
+        <div class="stat"><span>Valor do catálogo</span><strong id="stValor">—</strong></div>
+      </div>
+
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="Buscar por título, cidade, bairro…" aria-label="Buscar imóvel">
+        <select id="fOp" aria-label="Filtrar por operação">
+          <option value="">Venda + aluguel</option>
+          <option value="venda">Somente venda</option>
+          <option value="aluguel">Somente aluguel</option>
+        </select>
+        <button class="btn btn--ghost" id="btnReset" type="button" title="Descarta alterações e volta ao catálogo original">Restaurar padrão</button>
+        <button class="btn btn--primary" id="btnNovo" type="button">+ Novo imóvel</button>
+      </div>
+      <p class="count" id="count" role="status" aria-live="polite"></p>
+
+      <div class="tablewrap">
+        <table class="table">
+          <thead>
+            <tr><th>Imóvel</th><th>Tipo</th><th>Operação</th><th>Preço</th><th class="th--actions">Ações</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Modal formulário ===== -->
+  <div class="modal" id="formModal" hidden>
+    <div class="modal__overlay" data-close></div>
+    <div class="modal__box modal__box--lg" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+      <button class="modal__close" data-close type="button" aria-label="Fechar">✕</button>
+      <h2 id="formTitle">Novo imóvel</h2>
+      <form id="imovelForm" novalidate>
+        <div class="grid2">
+          <div class="field"><label for="f_titulo">Título *</label><input id="f_titulo" required maxlength="80" placeholder="Ex.: Casa com piscina no Centro"></div>
+          <div class="field"><label for="f_tipo">Tipo *</label><select id="f_tipo"><option>Apartamento</option><option>Casa</option><option>Cobertura</option><option>Loft</option><option>Sala Comercial</option><option>Terreno</option></select></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label for="f_operacao">Operação *</label><select id="f_operacao"><option value="venda">Venda</option><option value="aluguel">Aluguel</option></select></div>
+          <div class="field"><label for="f_preco">Preço (R$) *</label><input id="f_preco" type="number" min="1" step="1" required placeholder="Ex.: 450000"></div>
+          <div class="field"><label for="f_area">Área (m²) *</label><input id="f_area" type="number" min="1" step="1" required placeholder="Ex.: 120"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label for="f_cidade">Cidade *</label><input id="f_cidade" required maxlength="60" placeholder="Ex.: São Paulo"></div>
+          <div class="field"><label for="f_bairro">Bairro *</label><input id="f_bairro" required maxlength="60" placeholder="Ex.: Vila Mariana"></div>
+          <div class="field"><label for="f_uf">UF *</label><input id="f_uf" required maxlength="2" placeholder="SP"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label for="f_quartos">Quartos</label><input id="f_quartos" type="number" min="0" step="1" value="2"></div>
+          <div class="field"><label for="f_vagas">Vagas</label><input id="f_vagas" type="number" min="0" step="1" value="1"></div>
+          <div class="field checks"><label class="check"><input type="checkbox" id="f_destaque"> Destaque</label><label class="check"><input type="checkbox" id="f_novo"> Novo</label></div>
+        </div>
+        <div class="field"><label for="f_desc">Descrição</label><textarea id="f_desc" rows="3" maxlength="600" placeholder="Destaques do imóvel, localização, lazer…"></textarea></div>
+        <div class="field"><label for="f_feats">Diferenciais (um por linha)</label><textarea id="f_feats" rows="3" placeholder="Piscina&#10;Varanda gourmet&#10;Portaria 24h"></textarea></div>
+        <div class="field">
+          <label>Fotos (até 5 — a 1ª é a capa)</label>
+          <div class="slots" id="slots"></div>
+          <small class="muted">Formatos JPG/PNG. As imagens são otimizadas e salvas no navegador.</small>
+        </div>
+        <p class="form__error" id="formError" role="alert" hidden></p>
+        <div class="modal__actions">
+          <button class="btn btn--primary" type="submit">Salvar imóvel</button>
+          <button class="btn btn--outline" data-close type="button">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Modal confirmação ===== -->
+  <div class="modal" id="confirmModal" hidden>
+    <div class="modal__overlay" data-close></div>
+    <div class="modal__box modal__box--sm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">Confirmar</h2>
+      <p id="confirmText"></p>
+      <div class="modal__actions">
+        <button class="btn btn--danger" id="confirmYes" type="button">Confirmar</button>
+        <button class="btn btn--outline" data-close type="button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="js/dados.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

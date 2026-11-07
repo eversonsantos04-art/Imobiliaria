@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VivaLar Imóveis — Encontre o lar perfeito</title>
+  <meta name="description" content="VivaLar Imóveis: compra, venda e locação de imóveis residenciais e comerciais. Encontre o lar perfeito com quem entende de morar bem.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ===== Ícones SVG ===== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></symbol>
+      <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H8l-3.5 4H4a1 1 0 0 0-1 1v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></symbol>
+      <symbol id="i-area" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h6V3"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.9.34 1.79.66 2.63a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.45-1.18a2 2 0 0 1 2.11-.45c.84.32 1.73.54 2.63.66A2 2 0 0 1 22 16.92z"/></symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- ===== Header ===== -->
+  <header class="header" id="header">
+    <div class="container header__inner">
+      <a href="#inicio" class="logo" aria-label="VivaLar Imóveis — início">
+        <span class="logo__mark" aria-hidden="true"><svg width="26" height="26"><use href="#i-home"/></svg></span>
+        <span class="logo__text">Viva<em>Lar</em></span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <ul class="nav__list">
+          <li><a class="nav__link" href="#inicio">Início</a></li>
+          <li><a class="nav__link" href="#imoveis">Imóveis</a></li>
+          <li><a class="nav__link" href="#sobre">Sobre</a></li>
+          <li><a class="nav__link" href="#servicos">Serviços</a></li>
+          <li><a class="nav__link" href="#depoimentos">Depoimentos</a></li>
+          <li><a class="nav__link" href="#contato">Contato</a></li>
+        </ul>
+      </nav>
+      <div class="header__actions">
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+          <svg width="20" height="20" class="icon-sun"><use href="#i-sun"/></svg>
+          <svg width="20" height="20" class="icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        <a href="#contato" class="btn btn--primary btn--sm header__cta">Falar com corretor</a>
+        <button class="hamburger" id="hamburger" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===== Hero ===== -->
+    <section class="hero" id="inicio">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="container hero__inner">
+        <div class="hero__content reveal">
+          <span class="eyebrow">Imobiliária premium · CRECI 00000-F</span>
+          <h1 class="hero__title">Encontre o <span class="highlight">lar perfeito</span> para a sua vida</h1>
+          <p class="hero__sub">Compra, venda e locação de imóveis com atendimento consultivo, transparência total e as melhores condições do mercado.</p>
+          <form class="search-bar" id="heroSearch" role="search" aria-label="Buscar imóveis">
+            <div class="search-bar__field">
+              <label for="qCidade">Cidade</label>
+              <input type="text" id="qCidade" name="cidade" placeholder="Ex.: São Paulo" autocomplete="off">
+            </div>
+            <div class="search-bar__field">
+              <label for="qTipo">Tipo</label>
+              <select id="qTipo" name="tipo">
+                <option value="">Todos</option>
+                <option>Apartamento</option>
+                <option>Casa</option>
+                <option>Cobertura</option>
+                <option>Loft</option>
+                <option>Sala Comercial</option>
+                <option>Terreno</option>
+              </select>
+            </div>
+            <div class="search-bar__field">
+              <label for="qOp">Operação</label>
+              <select id="qOp" name="operacao">
+                <option value="">Comprar ou alugar</option>
+                <option value="venda">Comprar</option>
+                <option value="aluguel">Alugar</option>
+              </select>
+            </div>
+            <button class="btn btn--primary search-bar__btn" type="submit">
+              <svg width="18" height="18" aria-hidden="true"><use href="#i-search"/></svg> Buscar
+            </button>
+          </form>
+          <div class="hero__stats">
+            <div class="hero__stat"><strong data-count="15" data-suffix=" anos">0</strong><span>de mercado</span></div>
+            <div class="hero__stat"><strong data-count="2500" data-suffix="+">0</strong><span>imóveis negociados</span></div>
+            <div class="hero__stat"><strong data-count="98" data-suffix="%">0</strong><span>clientes satisfeitos</span></div>
+          </div>
+        </div>
+        <div class="hero__card reveal" aria-hidden="true">
+          <div class="hero__card-img">
+                        <img src="assets/img/hero.jpg" alt="" fetchpriority="high" onerror="this.remove()">
+          </div>
+          <div class="hero__card-float">
+            <svg width="22" height="22"><use href="#i-check"/></svg>
+            <div><strong>Proposta aprovada</strong><span>Apartamento · Vila Mariana</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Imóveis ===== -->
+    <section class="section" id="imoveis">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Catálogo</span>
+          <h2>Imóveis em <span class="highlight">destaque</span></h2>
+          <p>Filtre por operação, tipo e cidade. Clique em um imóvel para ver todos os detalhes.</p>
+        </div>
+        <div class="filters reveal" role="group" aria-label="Filtros de imóveis">
+          <div class="chips" id="opChips">
+            <button class="chip is-active" data-op="" type="button">Todos</button>
+            <button class="chip" data-op="venda" type="button">Venda</button>
+            <button class="chip" data-op="aluguel" type="button">Aluguel</button>
+          </div>
+          <div class="filters__selects">
+            <select id="fTipo" aria-label="Filtrar por tipo">
+              <option value="">Todos os tipos</option>
+              <option>Apartamento</option>
+              <option>Casa</option>
+              <option>Cobertura</option>
+              <option>Loft</option>
+              <option>Sala Comercial</option>
+              <option>Terreno</option>
+            </select>
+            <select id="fCidade" aria-label="Filtrar por cidade"><option value="">Todas as cidades</option></select>
+            <select id="fSort" aria-label="Ordenar">
+              <option value="relevancia">Mais relevantes</option>
+              <option value="menor">Menor preço</option>
+              <option value="maior">Maior preço</option>
+              <option value="area">Maior área</option>
+            </select>
+          </div>
+        </div>
+        <p class="results-count" id="resultsCount" role="status" aria-live="polite"></p>
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="emptyState" hidden>
+          <svg width="48" height="48" aria-hidden="true"><use href="#i-search"/></svg>
+          <h3>Nenhum imóvel encontrado</h3>
+          <p>Tente ajustar os filtros ou fale com um corretor — temos novidades toda semana.</p>
+          <button class="btn btn--outline" id="clearFilters" type="button">Limpar filtros</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Sobre ===== -->
+    <section class="section section--alt" id="sobre">
+      <div class="container about">
+        <div class="about__media reveal" aria-hidden="true">
+          <div class="about__img about__img--a"><img src="assets/img/sobre-1.jpg" alt="" loading="lazy" onerror="this.remove()"></div>
+          <div class="about__img about__img--b"><img src="assets/img/sobre-2.jpg" alt="" loading="lazy" onerror="this.remove()"></div>
+          <div class="about__badge"><strong>15+</strong><span>anos de confiança</span></div>
+        </div>
+        <div class="about__content reveal">
+          <span class="eyebrow">Sobre nós</span>
+          <h2>Mais que imóveis, <span class="highlight">realizamos sonhos</span></h2>
+          <p>Há mais de 15 anos a VivaLar ajuda famílias e investidores a tomar a melhor decisão imobiliária — com curadoria de imóveis, avaliação justa e acompanhamento jurídico do início ao fim.</p>
+          <ul class="check-list">
+            <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Curadoria com vistoria técnica em todos os imóveis</li>
+            <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Documentação e financiamento assistidos</li>
+            <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Corretores certificados CRECI e atendimento 7 dias por semana</li>
+          </ul>
+          <div class="about__counters">
+            <div><strong data-count="120">0</strong><span>corretores parceiros</span></div>
+            <div><strong data-count="40" data-suffix=" mi">0</strong><span>em VGV negociado</span></div>
+            <div><strong data-count="320" data-suffix="+">0</strong><span>cidades atendidas</span></div>
+          </div>
+          <a href="#contato" class="btn btn--primary">Agendar uma visita</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Serviços ===== -->
+    <section class="section" id="servicos">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Serviços</span>
+          <h2>O que fazemos <span class="highlight">por você</span></h2>
+          <p>Do primeiro contato à entrega das chaves, cuidamos de cada etapa.</p>
+        </div>
+        <div class="cards-4">
+          <article class="service reveal">
+            <span class="service__icon" aria-hidden="true"><svg width="26" height="26"><use href="#i-home"/></svg></span>
+            <h3>Compra de imóveis</h3>
+            <p>Busca personalizada, visitas agendadas e negociação do melhor preço e condição.</p>
+          </article>
+          <article class="service reveal">
+            <span class="service__icon" aria-hidden="true"><svg width="26" height="26"><use href="#i-key"/></svg></span>
+            <h3>Venda e locação</h3>
+            <p>Anúncio profissional com fotos, divulgação multicanal e triagem de interessados.</p>
+          </article>
+          <article class="service reveal">
+            <span class="service__icon" aria-hidden="true"><svg width="26" height="26"><use href="#i-chart"/></svg></span>
+            <h3>Investimentos</h3>
+            <p>Análise de rentabilidade, valorização e carteira de imóveis para investidores.</p>
+          </article>
+          <article class="service reveal">
+            <span class="service__icon" aria-hidden="true"><svg width="26" height="26"><use href="#i-shield"/></svg></span>
+            <h3>Segurança jurídica</h3>
+            <p>Due diligence completa, contratos e acompanhamento em cartório sem burocracia.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Simulador ===== -->
+    <section class="section section--alt" id="simulador">
+      <div class="container sim">
+        <div class="sim__info reveal">
+          <span class="eyebrow">Simulador</span>
+          <h2>Quanto fica a <span class="highlight">parcela?</span></h2>
+          <p>Faça uma estimativa rápida do financiamento com base no valor do imóvel, entrada e prazo. Valores aproximados, sem compromisso.</p>
+          <ul class="check-list">
+            <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Taxa média de referência: 10,5% a.a.</li>
+            <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Sistema de amortização Price (parcelas fixas)</li>
+          </ul>
+        </div>
+        <form class="sim__card reveal" id="simForm" novalidate>
+          <div class="field">
+            <label for="simValor">Valor do imóvel (R$)</label>
+            <input type="number" id="simValor" min="50000" step="1000" value="500000" required>
+          </div>
+          <div class="field">
+            <label for="simEntrada">Entrada (R$)</label>
+            <input type="number" id="simEntrada" min="0" step="1000" value="100000" required>
+          </div>
+          <div class="field">
+            <label for="simPrazo">Prazo (meses)</label>
+            <select id="simPrazo">
+              <option value="120">120 meses (10 anos)</option>
+              <option value="240">240 meses (20 anos)</option>
+              <option value="360" selected>360 meses (30 anos)</option>
+              <option value="420">420 meses (35 anos)</option>
+            </select>
+          </div>
+          <button class="btn btn--primary btn--block" type="submit">Calcular parcela</button>
+          <div class="sim__result" id="simResult" role="status" aria-live="polite" hidden>
+            <div><span>Parcela estimada</span><strong id="simParcela">—</strong></div>
+            <div><span>Total financiado</span><strong id="simTotal">—</strong></div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== Depoimentos ===== -->
+    <section class="section" id="depoimentos">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Depoimentos</span>
+          <h2>Quem <span class="highlight">conquistou</span> com a gente</h2>
+        </div>
+        <div class="slider reveal" id="slider">
+          <button class="slider__btn slider__btn--prev" id="slidePrev" type="button" aria-label="Depoimento anterior"><svg width="20" height="20"><use href="#i-chev"/></svg></button>
+          <div class="slider__viewport">
+            <div class="slider__track" id="slideTrack"></div>
+          </div>
+          <button class="slider__btn slider__btn--next" id="slideNext" type="button" aria-label="Próximo depoimento"><svg width="20" height="20" style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+        </div>
+        <div class="dots" id="slideDots" role="tablist" aria-label="Escolher depoimento"></div>
+      </div>
+    </section>
+
+    <!-- ===== Faixa CTA ===== -->
+    <section class="cta-band" aria-label="Agende uma visita">
+      <div class="container cta-band__inner reveal">
+        <div>
+          <h2>Pronto para conquistar o seu próximo endereço?</h2>
+          <p>Agende uma visita gratuita e receba uma curadoria de imóveis no seu perfil em até 24 horas.</p>
+        </div>
+        <div class="cta-band__btns">
+          <a href="#contato" class="btn btn--accent">Agendar visita grátis</a>
+          <a href="#imoveis" class="btn btn--ghost-light">Ver imóveis</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Contato ===== -->
+    <section class="section section--alt" id="contato">
+      <div class="container contact">
+        <div class="contact__info reveal">
+          <span class="eyebrow">Contato</span>
+          <h2>Fale com um <span class="highlight">especialista</span></h2>
+          <p>Retornamos em até 30 minutos no horário comercial. Sem compromisso.</p>
+          <ul class="contact__list">
+            <li><span class="contact__icon" aria-hidden="true"><svg width="20" height="20"><use href="#i-phone"/></svg></span><div><strong>(11) 4002-8922</strong><span>Seg–Sáb, 9h às 19h</span></div></li>
+            <li><span class="contact__icon" aria-hidden="true"><svg width="20" height="20"><use href="#i-mail"/></svg></span><div><strong>contato@vivalar.com.br</strong><span>Respondemos em 1 dia útil</span></div></li>
+            <li><span class="contact__icon" aria-hidden="true"><svg width="20" height="20"><use href="#i-pin"/></svg></span><div><strong>Av. Paulista, 1000 · São Paulo/SP</strong><span>Estacionamento no local</span></div></li>
+            <li><span class="contact__icon" aria-hidden="true"><svg width="20" height="20"><use href="#i-clock"/></svg></span><div><strong>Visitas 7 dias por semana</strong><span>Agende pelo formulário</span></div></li>
+          </ul>
+        </div>
+        <form class="contact__form reveal" id="contactForm" novalidate>
+          <div class="form-row">
+            <div class="field">
+              <label for="cNome">Nome completo *</label>
+              <input type="text" id="cNome" name="nome" placeholder="Seu nome" required autocomplete="name">
+              <small class="field__error" data-error-for="cNome"></small>
+            </div>
+            <div class="field">
+              <label for="cFone">WhatsApp *</label>
+              <input type="tel" id="cFone" name="telefone" placeholder="(11) 99999-9999" required autocomplete="tel">
+              <small class="field__error" data-error-for="cFone"></small>
+            </div>
+          </div>
+          <div class="field">
+            <label for="cEmail">E-mail *</label>
+            <input type="email" id="cEmail" name="email" placeholder="voce@email.com" required autocomplete="email">
+            <small class="field__error" data-error-for="cEmail"></small>
+          </div>
+          <div class="field">
+            <label for="cAssunto">Assunto</label>
+            <select id="cAssunto" name="assunto">
+              <option>Quero comprar um imóvel</option>
+              <option>Quero alugar um imóvel</option>
+              <option>Quero vender meu imóvel</option>
+              <option>Quero investir</option>
+              <option>Outro assunto</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="cMsg">Mensagem *</label>
+            <textarea id="cMsg" name="mensagem" rows="4" placeholder="Conte o que você procura: bairro, quartos, orçamento…" required></textarea>
+            <small class="field__error" data-error-for="cMsg"></small>
+          </div>
+          <button class="btn btn--primary btn--block" type="submit">Enviar mensagem</button>
+          <p class="form__note">Ao enviar, você concorda em ser contatado pela nossa equipe.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div>
+        <a href="#inicio" class="logo logo--footer"><span class="logo__mark" aria-hidden="true"><svg width="26" height="26"><use href="#i-home"/></svg></span><span class="logo__text">Viva<em>Lar</em></span></a>
+        <p>A imobiliária que coloca você no centro da negociação. CRECI 00000-F.</p>
+      </div>
+      <nav aria-label="Links do rodapé">
+        <h3>Navegação</h3>
+        <ul>
+          <li><a href="#imoveis">Imóveis</a></li>
+          <li><a href="#sobre">Sobre nós</a></li>
+          <li><a href="#servicos">Serviços</a></li>
+          <li><a href="#contato">Contato</a></li>
+          <li><a href="admin.html">Área do corretor</a></li>
+        </ul>
+      </nav>
+      <div>
+        <h3>Atendimento</h3>
+        <ul>
+          <li>(11) 4002-8922</li>
+          <li>contato2222@vivalar.com.br</li>
+          <li>Av. Paulista, 1000 · São Paulo/SP</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Horário</h3>
+        <ul>
+          <li>Seg–Sex: 9h às 19h</li>
+          <li>Sábado: 9h às 15h</li>
+          <li>Visitas: 7 dias/semana</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bar"><div class="container">© <span id="year"></span> VivaLar Imóveis. Todos os direitos reservados.</div></div>
+  </footer>
+
+  <!-- ===== Modal de detalhes ===== -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal__overlay" data-close-modal></div>
+    <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal__close" id="modalClose" type="button" aria-label="Fechar detalhes"><svg width="20" height="20"><use href="#i-close"/></svg></button>
+      <div class="modal__gallery" id="modalGallery">
+        <div class="modal__track" id="modalTrack"></div>
+        <button class="gbtn gbtn--prev" id="modalPrev" type="button" aria-label="Foto anterior"><svg width="20" height="20"><use href="#i-chev"/></svg></button>
+        <button class="gbtn gbtn--next" id="modalNext" type="button" aria-label="Próxima foto"><svg width="20" height="20" style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+        <span class="modal__count" id="modalCount"></span>
+      </div>
+      <div class="modal__dots" id="modalDots"></div>
+      <div class="modal__body">
+        <span class="badge" id="modalOp"></span>
+        <h3 id="modalTitle"></h3>
+        <p class="modal__loc" id="modalLoc"></p>
+        <p class="modal__price" id="modalPrice"></p>
+        <div class="modal__specs" id="modalSpecs"></div>
+        <p id="modalDesc"></p>
+        <ul class="check-list" id="modalFeatures"></ul>
+        <div class="modal__actions">
+          <button class="btn btn--primary" id="modalCta" type="button">Tenho interesse</button>
+          <button class="btn btn--outline" data-close-modal type="button">Voltar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <a class="whats-float" id="whatsFloat" href="#" target="_blank" rel="noopener" aria-label="Conversar no WhatsApp">
+    <svg width="28" height="28" aria-hidden="true"><use href="#i-phone"/></svg>
+    <span class="whats-float__tip">Fale conosco no WhatsApp</span>
+  </a>
+
+  <button class="back-top" id="backTop" type="button" aria-label="Voltar ao topo" hidden>
+    <svg width="20" height="20"><use href="#i-arrow-up"/></svg>
+  </button>
+
+  <script src="js/dados.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
