@@ -1,0 +1,71 @@
+/* =============================================================
+   TESTE DE PALETA — "Cores do logo" (Corretores de Imóveis)
+   -------------------------------------------------------------
+   Arquivo TEMPORÁRIO de teste. Não altera o tema padrão do site:
+   ele só age quando o documento está em data-theme="logo", que é
+   ativado pelo botão de tema do cabeçalho (claro → escuro → logo)
+   ou pela URL  index.html?tema=logo
+
+   Paleta extraída de assets/img/logo.png:
+     fundo      #000000   preto
+     bronze     #A9711E   ouro escuro
+     ouro       #EABD60   ouro médio (cor principal)
+     dourado    #FDF3AC   brilho / destaque
+     branco     #F9F8EB   texto (branco quente)
+
+   PARA REMOVER: apague este arquivo e as linhas marcadas com
+   "PALETA-TESTE" em index.html e js/script.js.
+   ============================================================= */
+
+html[data-theme="logo"] {
+  --brand: #eabd60;           /* ouro médio: textos, ícones, preços, botões */
+  --brand-strong: #a9711e;    /* bronze: hover e gradientes */
+  --accent: #fdf3ac;          /* dourado claro: destaques */
+  --bg: #000000;              /* fundo preto do logo */
+  --bg-alt: #07080c;          /* seção alternada */
+  --surface: #101319;         /* cartões, campos, cards */
+  --text: #f9f8eb;            /* texto principal (branco quente) */
+  --text-muted: #a5a496;      /* texto secundário */
+  --border: #2b2b24;          /* bordas discretas sobre preto */
+  --nav-bg: rgba(0, 0, 0, .88);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .7);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, .85);
+}
+
+/* ---------- Contraste: elementos com fundo dourado ---------- */
+html[data-theme="logo"] .btn--primary,
+html[data-theme="logo"] .btn--outline:hover,
+html[data-theme="logo"] .chip.is-active,
+html[data-theme="logo"] .toast,
+html[data-theme="logo"] .back-top,
+html[data-theme="logo"] .hero__card-float svg,
+html[data-theme="logo"] ::selection {
+  color: #14140d;             /* texto escuro sobre ouro */
+}
+html[data-theme="logo"] .btn--outline:hover {
+  background: var(--accent); border-color: var(--accent);
+}
+html[data-theme="logo"] .icon-sun { display: none; }  /* ícone de lua no tema escuro */
+
+/* ---------- Badges do catálogo (cores fixas no style.css) ---------- */
+html[data-theme="logo"] .badge--venda { background: #eabd60; color: #14140d; }
+html[data-theme="logo"] .badge--aluguel { background: #a9711e; color: #14140d; }  /* texto escuro: contraste 4,6:1 */
+html[data-theme="logo"] .badge--novo {
+  background: #10130c; color: #fdf3ac;
+  box-shadow: inset 0 0 0 1px rgba(253, 243, 172, .65);
+}
+/* .badge--destaque usa var(--accent) + texto marrom — já funciona */
+
+/* ---------- Fundos fixos que eram verdes ---------- */
+html[data-theme="logo"] .footer { background: #000; color: #c9c8ba; }
+html[data-theme="logo"] .hero__card-img { background: linear-gradient(135deg, #a9711e, #000); }
+html[data-theme="logo"] .cta-band { background-color: #000; }
+html[data-theme="logo"] .cta-band::before {
+  background: linear-gradient(100deg, rgba(0, 0, 0, .94), rgba(10, 8, 2, .55));
+}
+html[data-theme="logo"] .modal__overlay { background: rgba(0, 0, 0, .74); }
+
+/* ---------- Placeholder dos imóveis (gradientes por imóvel) ---------- */
+html[data-theme="logo"] .card .ph {
+  background: linear-gradient(135deg, #1c1608, #3d2c0d) !important;
+}

@@ -92,7 +92,7 @@ html[data-theme="dark"] .icon-sun { display: none; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .field label { font-size: .85rem; font-weight: 600; }
 .field input, .field select, .field textarea,
-.filters__selects select, .search-bar__field input, .search-bar__field select {
+.filters__selects select, .filters__selects input, .search-bar__field input, .search-bar__field select {
   font: 500 .95rem var(--font-body);
   color: var(--text);
   background: var(--surface);
@@ -103,7 +103,7 @@ html[data-theme="dark"] .icon-sun { display: none; }
   transition: border-color .18s, box-shadow .18s;
 }
 .field input:focus, .field select:focus, .field textarea:focus,
-.filters__selects select:focus, .search-bar__field input:focus, .search-bar__field select:focus {
+.filters__selects select:focus, .filters__selects input:focus, .search-bar__field input:focus, .search-bar__field select:focus {
   outline: none; border-color: var(--brand);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
 }
@@ -123,6 +123,11 @@ html[data-theme="dark"] .icon-sun { display: none; }
 .header__inner { height: var(--header-h); display: flex; align-items: center; gap: 24px; }
 .logo { display: inline-flex; align-items: center; gap: 10px; font: 800 1.35rem var(--font-head); }
 .logo em { font-style: normal; color: var(--brand); }
+/* Logo "Corretores de Imóveis" — largura controlada para não empurrar o menu */
+.logo__img {
+  display: block; width: clamp(132px, 34vw, 160px); height: auto;
+  border-radius: 8px; box-shadow: 0 2px 8px rgba(13, 21, 38, .25);
+}
 .logo__mark {
   display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border-radius: 12px;
@@ -200,6 +205,18 @@ html[data-theme="dark"] .icon-sun { display: none; }
 .chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
 .filters__selects { display: flex; gap: 10px; flex-wrap: wrap; }
 .filters__selects select { width: auto; min-width: 150px; }
+.filters__selects input { width: auto; min-width: 280px; }
+/* Código de referência (VL-001) — card do catálogo e modal de detalhes */
+.card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.card__code, .modal__code {
+  font: 700 .72rem/1 var(--font-body); letter-spacing: .06em; color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--brand) 45%, transparent);
+  padding: .32rem .6rem; border-radius: 8px; white-space: nowrap; flex: none;
+}
+.modal__code { font-size: .76rem; margin-left: 8px; vertical-align: middle; }
+.card__code { font-size: .7rem; padding: .28rem .55rem; }
+.modal__code:empty, .card__code:empty { display: none; }
 .results-count { color: var(--text-muted); font-size: .9rem; margin: 14px 0 20px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
 
@@ -358,6 +375,7 @@ html[data-theme="dark"] .icon-sun { display: none; }
 .footer { background: #0c1513; color: #c6d4d0; padding: 60px 0 0; }
 .footer__grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; padding-bottom: 44px; }
 .logo--footer .logo__text { color: #fff; }
+.logo--footer .logo__img { width: clamp(150px, 40vw, 224px); border-radius: 10px; box-shadow: none; }
 .footer p { font-size: .9rem; margin-top: 12px; max-width: 20rem; }
 .footer h3 { color: #fff; font-size: .95rem; margin-bottom: 12px; }
 .footer ul { display: grid; gap: 8px; font-size: .9rem; }
@@ -552,7 +570,8 @@ html[data-theme="dark"] .icon-sun { display: none; }
   .about, .sim, .contact { grid-template-columns: 1fr; gap: 40px; }
   .footer__grid { grid-template-columns: 1fr 1fr; }
 }
-@media (max-width: 768px) {
+@media (max-width: 980px) {
+  /* Logo + menu + botões não cabem lado a lado: menu vira hambúrguer */
   .nav {
     position: fixed; top: var(--header-h); left: 0; right: 0;
     background: var(--nav-bg); backdrop-filter: blur(14px);
@@ -564,6 +583,8 @@ html[data-theme="dark"] .icon-sun { display: none; }
   .nav__link { display: block; padding: .8rem; }
   .header__cta { display: none; }
   .hamburger { display: flex; }
+}
+@media (max-width: 768px) {
   .search-bar { grid-template-columns: 1fr 1fr; }
   .search-bar__btn { grid-column: 1 / -1; }
   .hero__stats { flex-wrap: wrap; gap: 20px; }
@@ -574,7 +595,7 @@ html[data-theme="dark"] .icon-sun { display: none; }
   .section { padding: 60px 0; }
   .cards-4, .form-row { grid-template-columns: 1fr; }
   .search-bar { grid-template-columns: 1fr; }
-  .filters__selects select { flex: 1; min-width: 0; }
+  .filters__selects select, .filters__selects input { flex: 1; min-width: 0; }
   .footer__grid { grid-template-columns: 1fr; }
   .modal__actions .btn { flex: 1; }
   .sim__result { grid-template-columns: 1fr; }

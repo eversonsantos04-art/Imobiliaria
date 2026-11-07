@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VivaLar Imóveis — Encontre o lar perfeito</title>
-  <meta name="description" content="VivaLar Imóveis: compra, venda e locação de imóveis residenciais e comerciais. Encontre o lar perfeito com quem entende de morar bem.">
+  <title>Corretores de Imóveis — Encontre o lar perfeito</title>
+  <meta name="description" content="Corretores de Imóveis: compra, venda e locação de imóveis residenciais e comerciais. Encontre o lar perfeito com quem entende de morar bem.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <!-- PALETA-TESTE: tema temporário "cores do logo" — remover junto com as linhas PALETA-TESTE em js/script.js -->
+  <link rel="stylesheet" href="css/paleta-teste.css">
 </head>
 <body>
   <!-- ===== Ícones SVG ===== -->
@@ -40,9 +42,8 @@
   <!-- ===== Header ===== -->
   <header class="header" id="header">
     <div class="container header__inner">
-      <a href="#inicio" class="logo" aria-label="VivaLar Imóveis — início">
-        <span class="logo__mark" aria-hidden="true"><svg width="26" height="26"><use href="#i-home"/></svg></span>
-        <span class="logo__text">Viva<em>Lar</em></span>
+      <a href="#inicio" class="logo" aria-label="Corretores de Imóveis — início">
+        <img class="logo__img" src="assets/img/logo.png" alt="" width="1447" height="390" fetchpriority="high">
       </a>
       <nav class="nav" id="nav" aria-label="Navegação principal">
         <ul class="nav__list">
@@ -129,7 +130,7 @@
         <div class="section-head reveal">
           <span class="eyebrow">Catálogo</span>
           <h2>Imóveis em <span class="highlight">destaque</span></h2>
-          <p>Filtre por operação, tipo e cidade. Clique em um imóvel para ver todos os detalhes.</p>
+          <p>Filtre por operação, tipo e cidade, ou busque direto pelo código do imóvel (ex.: VL-001). Clique em um imóvel para ver todos os detalhes.</p>
         </div>
         <div class="filters reveal" role="group" aria-label="Filtros de imóveis">
           <div class="chips" id="opChips">
@@ -138,6 +139,8 @@
             <button class="chip" data-op="aluguel" type="button">Aluguel</button>
           </div>
           <div class="filters__selects">
+            <input type="search" id="fBusca" class="filters__search" autocomplete="off"
+              placeholder="Código ou título (ex.: VL-001)" aria-label="Buscar imóvel por código, título ou bairro">
             <select id="fTipo" aria-label="Filtrar por tipo">
               <option value="">Todos os tipos</option>
               <option>Apartamento</option>
@@ -178,7 +181,7 @@
         <div class="about__content reveal">
           <span class="eyebrow">Sobre nós</span>
           <h2>Mais que imóveis, <span class="highlight">realizamos sonhos</span></h2>
-          <p>Há mais de 15 anos a VivaLar ajuda famílias e investidores a tomar a melhor decisão imobiliária — com curadoria de imóveis, avaliação justa e acompanhamento jurídico do início ao fim.</p>
+          <p>Há mais de 15 anos a Corretores de Imóveis ajuda famílias e investidores a tomar a melhor decisão imobiliária — com curadoria de imóveis, avaliação justa e acompanhamento jurídico do início ao fim.</p>
           <ul class="check-list">
             <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Curadoria com vistoria técnica em todos os imóveis</li>
             <li><svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> Documentação e financiamento assistidos</li>
@@ -356,7 +359,7 @@
   <footer class="footer">
     <div class="container footer__grid">
       <div>
-        <a href="#inicio" class="logo logo--footer"><span class="logo__mark" aria-hidden="true"><svg width="26" height="26"><use href="#i-home"/></svg></span><span class="logo__text">Viva<em>Lar</em></span></a>
+        <a href="#inicio" class="logo logo--footer" aria-label="Corretores de Imóveis — início"><img class="logo__img" src="assets/img/logo.png" alt="" width="1447" height="390" loading="lazy"></a>
         <p>A imobiliária que coloca você no centro da negociação. CRECI 00000-F.</p>
       </div>
       <nav aria-label="Links do rodapé">
@@ -386,7 +389,7 @@
         </ul>
       </div>
     </div>
-    <div class="footer__bar"><div class="container">© <span id="year"></span> VivaLar Imóveis. Todos os direitos reservados.</div></div>
+    <div class="footer__bar"><div class="container">© <span id="year"></span> Corretores de Imóveis. Todos os direitos reservados.</div></div>
   </footer>
 
   <!-- ===== Modal de detalhes ===== -->
@@ -402,7 +405,7 @@
       </div>
       <div class="modal__dots" id="modalDots"></div>
       <div class="modal__body">
-        <span class="badge" id="modalOp"></span>
+        <span class="badge" id="modalOp"></span><span class="modal__code" id="modalCode" title="Código de referência do imóvel"></span>
         <h3 id="modalTitle"></h3>
         <p class="modal__loc" id="modalLoc"></p>
         <p class="modal__price" id="modalPrice"></p>

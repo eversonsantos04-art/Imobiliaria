@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VivaLar — Painel do corretor</title>
-  <meta name="description" content="Área administrativa VivaLar: cadastrar, editar e excluir imóveis do catálogo.">
+  <title>Corretores de Imóveis — Painel do corretor</title>
+  <meta name="description" content="Área administrativa Corretores de Imóveis: cadastrar, editar e excluir imóveis do catálogo.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 <body>
   <header class="topbar">
     <div class="topbar__inner">
-      <a class="logo" href="index.html"><span class="logo__mark">V</span><span>Viva<em>Lar</em></span></a>
+      <a class="logo" href="index.html" aria-label="Corretores de Imóveis — ver site"><img class="logo__img" src="assets/img/logo.png" alt="" width="1447" height="390"></a>
       <span class="topbar__tag">Painel do corretor</span>
       <nav class="topbar__nav">
         <a href="index.html" target="_blank" rel="noopener">Ver site</a>
@@ -24,21 +24,22 @@
 
   <main class="wrap">
     <!-- ===== Login ===== -->
+    <!-- Na 1ª abertura o painel pede para criar a senha; não há senha no código -->
     <section id="loginView" class="login" hidden>
       <form class="login__card" id="loginForm" novalidate>
-        <h1>Acesso restrito</h1>
-        <p>Entre com suas credenciais de corretor para gerenciar o catálogo.</p>
-        <div class="field">
-          <label for="loginUser">Usuário</label>
-          <input type="text" id="loginUser" autocomplete="username" placeholder="admin" required>
-        </div>
+        <h1 id="loginTitle">Acesso restrito</h1>
+        <p id="loginSub">Entre com a senha deste navegador para gerenciar o catálogo.</p>
         <div class="field">
           <label for="loginPass">Senha</label>
           <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••" required>
         </div>
+        <div class="field" id="fieldPass2" hidden>
+          <label for="loginPass2">Repita a senha</label>
+          <input type="password" id="loginPass2" autocomplete="new-password" placeholder="••••••">
+        </div>
         <p class="login__error" id="loginError" role="alert" hidden></p>
-        <button class="btn btn--primary btn--block" type="submit">Entrar no painel</button>
-        <p class="login__hint">Acesso demo — usuário: <strong>admin</strong> · senha: <strong>viva123</strong></p>
+        <button class="btn btn--primary btn--block" type="submit" id="loginBtn">Entrar no painel</button>
+        <p class="login__hint" id="loginHint">A senha é criada por você e fica guardada apenas neste navegador.</p>
       </form>
     </section>
 
@@ -52,7 +53,7 @@
       </div>
 
       <div class="toolbar">
-        <input type="search" id="q" placeholder="Buscar por título, cidade, bairro…" aria-label="Buscar imóvel">
+        <input type="search" id="q" placeholder="Buscar por código (ex.: VL-001), título, cidade, bairro…" aria-label="Buscar imóvel por código, título, cidade ou bairro">
         <select id="fOp" aria-label="Filtrar por operação">
           <option value="">Venda + aluguel</option>
           <option value="venda">Somente venda</option>
@@ -66,7 +67,7 @@
       <div class="tablewrap">
         <table class="table">
           <thead>
-            <tr><th>Imóvel</th><th>Tipo</th><th>Operação</th><th>Preço</th><th class="th--actions">Ações</th></tr>
+            <tr><th>Imóvel</th><th>Código</th><th>Tipo</th><th>Operação</th><th>Preço</th><th class="th--actions">Ações</th></tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
@@ -84,6 +85,10 @@
         <div class="grid2">
           <div class="field"><label for="f_titulo">Título *</label><input id="f_titulo" required maxlength="80" placeholder="Ex.: Casa com piscina no Centro"></div>
           <div class="field"><label for="f_tipo">Tipo *</label><select id="f_tipo"><option>Apartamento</option><option>Casa</option><option>Cobertura</option><option>Loft</option><option>Sala Comercial</option><option>Terreno</option></select></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="f_codigo">Código de referência</label><input id="f_codigo" maxlength="14" placeholder="VL-013" autocomplete="off" spellcheck="false"></div>
+          <div class="field"><small class="muted">Aparece no site e nas buscas. Deixe em branco para gerar o próximo código (ex.: VL-013). Também aceita o seu (ex.: AP-12 ou TEMP-3).</small></div>
         </div>
         <div class="grid3">
           <div class="field"><label for="f_operacao">Operação *</label><select id="f_operacao"><option value="venda">Venda</option><option value="aluguel">Aluguel</option></select></div>

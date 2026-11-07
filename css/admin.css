@@ -1,4 +1,4 @@
-/* VivaLar — Painel administrativo */
+/* Corretores de Imóveis — Painel administrativo */
 :root {
   --brand: #0e7c66;
   --brand-strong: #0a6352;
@@ -26,6 +26,8 @@ a { color: inherit; }
 .topbar__inner { width: min(1180px, 94%); margin-inline: auto; display: flex; align-items: center; gap: 14px; padding: 14px 0; }
 .logo { display: inline-flex; align-items: center; gap: 9px; font: 800 1.2rem var(--font-head); text-decoration: none; }
 .logo em { font-style: normal; color: #2fb99a; }
+/* Logo "Corretores de Imóveis" no topo do painel */
+.logo__img { display: block; width: clamp(120px, 28vw, 148px); height: auto; border-radius: 6px; }
 .logo__mark {
   width: 34px; height: 34px; border-radius: 10px; display: inline-flex;
   align-items: center; justify-content: center; font-weight: 800; color: #fff;
@@ -115,6 +117,16 @@ textarea { resize: vertical; }
 .badge--venda { background: #0e7c66; }
 .badge--aluguel { background: #7c3aed; }
 .price { font-weight: 700; white-space: nowrap; }
+/* Código de referência do imóvel (clicar copia) */
+.table td.cell-code { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+.cell-code .cod {
+  font: 700 .82rem/1 var(--font-body); letter-spacing: .04em;
+  color: var(--brand); background: rgba(14, 124, 102, .1);
+  border: 1px dashed rgba(14, 124, 102, .45);
+  padding: .38rem .6rem; border-radius: 8px; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.cell-code .cod:hover { background: var(--brand); border-color: var(--brand); border-style: solid; color: #fff; }
 .cell-actions { text-align: right; white-space: nowrap; }
 .cell-actions .btn + .btn { margin-left: 8px; }
 .empty-row td { text-align: center; color: var(--muted); padding: 36px !important; }

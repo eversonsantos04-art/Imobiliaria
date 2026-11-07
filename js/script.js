@@ -1,4 +1,4 @@
-/* VivaLar Imóveis — interatividade */
+/* Corretores de Imóveis — interatividade */
 (function () {
   'use strict';
 
@@ -19,14 +19,17 @@
     return Array.isArray(window.VivaLarSeed) ? window.VivaLarSeed.map((im) => ({ ...im })) : [];
   }
   function carregarImoveis() {
+    let salvo = null;
     try {
       const raw = localStorage.getItem(CHAVE_DADOS);
       if (raw) {
         const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) return arr;
+        if (Array.isArray(arr)) salvo = arr;
       }
     } catch (_) { /* storage indisponível */ }
-    return semente();
+    const base = Array.isArray(salvo) ? salvo : semente();
+    /* Garante o código de referência (ex.: VL-001) em todos os imóveis */
+    return (window.VivaLarCodigos ? window.VivaLarCodigos.normalizar(base) : base);
   }
   let IMOVEIS = carregarImoveis();
   /* Atualiza o catálogo na hora se o admin salvar em outra aba */
@@ -42,7 +45,14 @@
   ];
 
   /* ---------- Estado dos filtros ---------- */
-  const state = { op: '', tipo: '', cidade: '', sort: 'relevancia' };
+  const state = { op: '', tipo: '', cidade: '', q: '', sort: 'relevancia' };
+  let cidades = [];
+
+  /* Texto usado na busca livre: código, título, tipo, bairro, cidade e UF */
+  function textoBusca(im) {
+    return [im.codigo, im.titulo, im.tipo, im.bairro, im.cidade, im.uf]
+      .filter(Boolean).join(' ').toLowerCase();
+  }
 
   /* ---------- Render: grade ---------- */
   const grid = $('#grid');
@@ -97,10 +107,12 @@
   }
 
   function filtrados() {
+    const q = state.q.trim().toLowerCase();
     let list = IMOVEIS.filter(im =>
       (!state.op || im.operacao === state.op) &&
       (!state.tipo || im.tipo === state.tipo) &&
-      (!state.cidade || im.cidade === state.cidade)
+      (!state.cidade || im.cidade === state.cidade) &&
+      (!q || textoBusca(im).includes(q))
     );
     if (state.sort === 'menor') list = [...list].sort((a, b) => a.preco - b.preco);
     if (state.sort === 'maior') list = [...list].sort((a, b) => b.preco - a.preco);
@@ -129,7 +141,10 @@
           </div>
         </div>
         <div class="card__body">
-          <span class="card__type">${esc(im.tipo)}</span>
+          <div class="card__head">
+            <span class="card__type">${esc(im.tipo)}</span>
+            <span class="card__code" title="Código do imóvel">${esc(im.codigo || '')}</span>
+          </div>
           <h3 class="card__title">${esc(im.titulo)}</h3>
           <p class="card__loc"><svg width="15" height="15"><use href="#i-pin"/></svg>${esc(im.bairro)} · ${esc(im.cidade)}/${esc(im.uf)}</p>
           <p class="card__price">${precoFmt(im)}</p>
@@ -140,19 +155,19 @@
 
   grid.addEventListener('click', e => {
     const card = e.target.closest('.card');
-    if (card) openModal(+card.dataset.id);
+    if (card) openModal(card.dataset.id);
   });
   grid.addEventListener('keydown', e => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('card')) {
       e.preventDefault();
-      openModal(+e.target.dataset.id);
+      openModal(e.target.dataset.id);
     }
   });
 
   /* ---------- Filtros ---------- */
   const fCidade = $('#fCidade');
   function atualizarCidades() {
-    const cidades = [...new Set(IMOVEIS.map((i) => i.cidade).filter(Boolean))].sort();
+    cidades = [...new Set(IMOVEIS.map((i) => i.cidade).filter(Boolean))].sort();
     fCidade.innerHTML = '<option value="">Todas as cidades</option>';
     cidades.forEach((c) => {
       const o = document.createElement('option');
@@ -173,11 +188,14 @@
   $('#fTipo').addEventListener('change', e => { state.tipo = e.target.value; render(); });
   fCidade.addEventListener('change', e => { state.cidade = e.target.value; render(); });
   $('#fSort').addEventListener('change', e => { state.sort = e.target.value; render(); });
+  $('#fBusca').addEventListener('input', e => { state.q = e.target.value; render(); });
   $('#clearFilters').addEventListener('click', () => {
     state.op = state.tipo = state.cidade = '';
+    state.q = '';
     state.sort = 'relevancia';
     $$('#opChips .chip').forEach((c, i) => c.classList.toggle('is-active', i === 0));
     $('#fTipo').value = ''; fCidade.value = ''; $('#fSort').value = 'relevancia';
+    $('#fBusca').value = '';
     render();
   });
 
@@ -187,6 +205,8 @@
     state.tipo = $('#qTipo').value;
     state.op = $('#qOp').value;
     state.cidade = cidades.find(c => c.toLowerCase() === cidade.toLowerCase()) || '';
+    state.q = '';
+    $('#fBusca').value = '';
     $$('#opChips .chip').forEach(c => c.classList.toggle('is-active', c.dataset.op === state.op));
     $('#fTipo').value = state.tipo;
     fCidade.value = state.cidade;
@@ -199,12 +219,13 @@
   let lastFocus = null;
 
   function openModal(id) {
-    const im = IMOVEIS.find(i => i.id === id);
+    const im = IMOVEIS.find(i => String(i.id) === String(id));
     if (!im) return;
     lastFocus = document.activeElement;
     $('#modalOp').className = 'badge badge--' + im.operacao;
     $('#modalOp').textContent = im.operacao === 'venda' ? 'Venda' : 'Aluguel';
     $('#modalTitle').textContent = im.titulo;
+    $('#modalCode').textContent = im.codigo ? `Cód. ${im.codigo}` : '';
     $('#modalLoc').textContent = `${im.tipo || ''} · ${im.bairro || ''}, ${im.cidade || ''}/${im.uf || ''}`;
     $('#modalPrice').innerHTML = precoFmt(im);
     $('#modalSpecs').innerHTML = specRow(im);
@@ -213,6 +234,7 @@
     $('#modalFeatures').innerHTML = (im.feats || []).map(f =>
       `<li><svg width="18" height="18"><use href="#i-check"/></svg>${esc(f)}</li>`).join('');
     $('#modalCta').dataset.titulo = im.titulo;
+    $('#modalCta').dataset.codigo = im.codigo || '';
     modal.hidden = false;
     document.body.style.overflow = 'hidden';
     $('#modalClose').focus();
@@ -232,9 +254,10 @@
   });
   $('#modalCta').addEventListener('click', e => {
     const titulo = e.currentTarget.dataset.titulo || '';
+    const codigo = e.currentTarget.dataset.codigo || '';
     closeModal();
     $('#cAssunto').selectedIndex = 0;
-    $('#cMsg').value = `Olá! Tenho interesse no imóvel "${titulo}". Gostaria de agendar uma visita.`;
+    $('#cMsg').value = `Olá! Tenho interesse no imóvel "${titulo}"${codigo ? ` (cód. ${codigo})` : ''}. Gostaria de agendar uma visita.`;
     $('#contato').scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => $('#cNome').focus({ preventScroll: true }), 600);
   });
@@ -384,13 +407,31 @@
 
   /* ---------- Tema ---------- */
   const root = document.documentElement;
-  try {
-    const saved = localStorage.getItem('vivalar-theme');
-    root.dataset.theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  } catch (_) { /* storage indisponível */ }
-  $('#themeToggle').addEventListener('click', () => {
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('vivalar-theme', root.dataset.theme); } catch (_) {}
+  /* PALETA-TESTE: 'logo' é o tema temporário com as cores do logo */
+  const TEMAS = ['light', 'dark', 'logo'];
+  const ROTULOS = {
+    light: 'Alternar tema — atual: claro',
+    dark: 'Alternar tema — atual: escuro',
+    logo: 'Alternar tema — atual: cores do logo',
+  };
+  let salvo = null;
+  try { salvo = localStorage.getItem('vivalar-theme'); } catch (_) { /* storage indisponível */ }
+  const temaUrl = new URLSearchParams(location.search).get('tema'); /* PALETA-TESTE */
+  const inicial = TEMAS.includes(temaUrl) ? temaUrl : salvo;        /* PALETA-TESTE */
+  root.dataset.theme = (inicial && TEMAS.includes(inicial))
+    ? inicial
+    : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const btnTema = $('#themeToggle');
+  function aplicarTema(t) {
+    root.dataset.theme = t;
+    try { localStorage.setItem('vivalar-theme', t); } catch (_) {}
+    const rotulo = ROTULOS[t] || ROTULOS.light;
+    btnTema.setAttribute('aria-label', rotulo);
+    btnTema.title = rotulo;
+  }
+  aplicarTema(root.dataset.theme);
+  btnTema.addEventListener('click', () => {
+    aplicarTema(TEMAS[(TEMAS.indexOf(root.dataset.theme) + 1) % TEMAS.length] || 'light');
   });
 
   /* ---------- Menu mobile ---------- */
@@ -448,7 +489,7 @@
 
   /* ---------- WhatsApp: TROQUE pelo número real (DDI+DDD+número, só dígitos) ---------- */
   const WHATSAPP_NUMERO = 5519991475411
-  const WHATSAPP_MSG = 'Olá! Vim pelo site da VivaLar e quero falar sobre imóveis.';
+  const WHATSAPP_MSG = 'Olá! Vim pelo site Corretores de Imóveis e quero falar sobre imóveis.';
   const whatsFloat = $('#whatsFloat');
   if (whatsFloat) whatsFloat.href = `https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(WHATSAPP_MSG)}`;
 
