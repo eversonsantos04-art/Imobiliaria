@@ -47,7 +47,8 @@
     <section id="dashView" hidden>
       <div class="tabs" role="tablist" aria-label="Seções do painel">
         <button class="tab is-on" id="tabCatalogo" type="button" role="tab" aria-selected="true" aria-controls="viewCatalogo">Catálogo</button>
-        <button class="tab" id="tabHistorico" type="button" role="tab" aria-selected="false" aria-controls="viewHistorico">Histórico</button>
+        <button class="tab" id="tabHistorico" type="button" role="tab" aria-selected="false" aria-controls="viewHistorico" hidden>Histórico</button>
+        <button class="tab" id="tabUsuarios" type="button" role="tab" aria-selected="false" aria-controls="viewUsuarios" hidden>Usuários</button>
       </div>
 
       <div id="viewCatalogo" role="tabpanel" aria-labelledby="tabCatalogo">
@@ -113,6 +114,47 @@
             <button class="btn btn--outline" id="histMais" type="button" hidden>Carregar mais</button>
           </div>
         </div><!-- /viewHistorico -->
+
+        <!-- ===== Usuários (só admin) ===== -->
+        <div id="viewUsuarios" role="tabpanel" aria-labelledby="tabUsuarios" hidden>
+          <div class="hist__head">
+            <div>
+              <h2>Usuários</h2>
+              <p class="muted">Só o administrador vê esta aba. Quem nasce aqui entra como <strong>corretor</strong>: pode cadastrar, editar e excluir imóveis, mas não vê o histórico.</p>
+            </div>
+            <span class="hist__count" id="usrCount" role="status" aria-live="polite"></span>
+          </div>
+
+          <div class="tablewrap">
+            <table class="table table--usr">
+              <thead>
+                <tr><th>Usuário</th><th>Papel</th><th>Criado em</th><th class="th--actions">Ações</th></tr>
+              </thead>
+              <tbody id="usrBody"></tbody>
+            </table>
+          </div>
+
+          <div class="panelcard">
+            <h3>Criar novo usuário</h3>
+            <form id="userForm" novalidate>
+              <div class="usrform">
+                <div class="field"><label for="u_nome">Nome *</label><input id="u_nome" required maxlength="60" placeholder="Ex.: Maria Silva" autocomplete="off"></div>
+                <div class="field"><label for="u_email">E-mail *</label><input id="u_email" type="email" required placeholder="voce@imobiliaria.com" autocomplete="off"></div>
+                <div class="field"><label for="u_senha">Senha *</label><input id="u_senha" type="password" required minlength="6" placeholder="mínimo 6 caracteres" autocomplete="new-password"></div>
+                <div class="field"><label for="u_papel">Papel *</label>
+                  <select id="u_papel">
+                    <option value="corretor" selected>Corretor</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+              <p class="form__error" id="userError" role="alert" hidden></p>
+              <div class="modal__actions">
+                <button class="btn btn--primary" type="submit" id="userBtn">Criar usuário</button>
+              </div>
+            </form>
+          </div>
+        </div><!-- /viewUsuarios -->
       </section>
   </main>
 

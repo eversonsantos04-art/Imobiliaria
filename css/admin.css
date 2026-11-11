@@ -200,6 +200,22 @@ textarea { resize: vertical; }
 .badge--update { background: #b45309; }
 .badge--delete { background: #be123c; }
 
+/* ---------- Usuários (só admin) ---------- */
+.table--usr { min-width: 720px; }
+.badge--corretor { background: #475569; }
+.panelcard {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-top: 18px;
+}
+.panelcard h3 { font-size: 1rem; margin-bottom: 16px; }
+.usrform { display: grid; grid-template-columns: 1.4fr 1.6fr 1.2fr .9fr; gap: 14px; }
+
+@media (max-width: 860px) {
+  .usrform { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .usrform { grid-template-columns: 1fr; }
+}
 @media (max-width: 860px) {
   .stats { grid-template-columns: 1fr 1fr; }
   .grid2, .grid3 { grid-template-columns: 1fr; }

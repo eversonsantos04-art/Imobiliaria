@@ -213,6 +213,9 @@
   const dashView = $('#dashView');
   const btnSair = $('#btnSair');
   const userChip = $('#userChip');   /* nome de quem está logado (topo) */
+  /* Só o papel 'admin' (Laerty) vira true — daí as abas Histórico e Usuários aparecem */
+  let ehAdmin = false;
+  let usuarioAtualId = null;         /* id da sessão (não deixa rebaixar a si mesmo) */
 
   /* Cliente Supabase — a URL e a chave vêm de js/supabase-config.js
      e o supabase-js vem do CDN (ver as tags no fim do admin.html) */
@@ -232,6 +235,10 @@
     dashView.hidden = true;
     btnSair.hidden = true;
     userChip.hidden = true;
+    ehAdmin = false;                 /* no logout, as abas de admin somem */
+    usuarioAtualId = null;
+    $('#tabHistorico').hidden = true;
+    $('#tabUsuarios').hidden = true;
     pararLock();
   }
   function showDash() {
@@ -264,6 +271,13 @@
         .from('perfis').select('nome, papel').eq('id', user.id).maybeSingle();
       if (perfil) { nome = perfil.nome || ''; papel = perfil.papel || ''; }
     } catch (_) { /* sem rede: fica com o e-mail mesmo */ }
+
+    /* Abas Histórico e Usuários: exclusivas do admin.
+       Se a consulta falhar, ficam ocultas (fecha por padrão). */
+    ehAdmin = papel === 'admin';
+    usuarioAtualId = user.id;
+    $('#tabHistorico').hidden = !ehAdmin;
+    $('#tabUsuarios').hidden = !ehAdmin;
 
     /* Sem nome no perfil, usa o e-mail (com a 1ª maiúscula) */
     if (!nome) {
@@ -689,21 +703,29 @@
   };
 
   function mostrarAba(qual) {
-    abaAtual = qual === 'historico' ? 'historico' : 'catalogo';
-    const ehHist = abaAtual === 'historico';
-    $('#viewCatalogo').hidden = ehHist;
-    $('#viewHistorico').hidden = !ehHist;
-    $('#tabCatalogo').classList.toggle('is-on', !ehHist);
-    $('#tabHistorico').classList.toggle('is-on', ehHist);
-    $('#tabCatalogo').setAttribute('aria-selected', String(!ehHist));
-    $('#tabHistorico').setAttribute('aria-selected', String(ehHist));
-    if (ehHist) carregarHistorico(true);
+    /* Histórico e Usuários são exclusivos do admin: quem não é admin cai no catálogo */
+    if (qual !== 'catalogo' && !ehAdmin) qual = 'catalogo';
+    abaAtual = ['historico', 'usuarios'].includes(qual) ? qual : 'catalogo';
+    const on = (q) => abaAtual === q;
+
+    $('#viewCatalogo').hidden = !on('catalogo');
+    $('#viewHistorico').hidden = !on('historico');
+    $('#viewUsuarios').hidden = !on('usuarios');
+    [['catalogo', '#tabCatalogo'], ['historico', '#tabHistorico'], ['usuarios', '#tabUsuarios']]
+      .forEach(([q, sel]) => {
+        $(sel).classList.toggle('is-on', on(q));
+        $(sel).setAttribute('aria-selected', String(on(q)));
+      });
+
+    if (on('historico')) carregarHistorico(true);
+    else if (on('usuarios')) carregarUsuarios(true);
     else renderTable();
   }
 
   /* Chamado depois de cada cadastro/edição/exclusão */
   function atualizarVista() {
     if (abaAtual === 'historico') carregarHistorico(true);
+    else if (abaAtual === 'usuarios') carregarUsuarios(true);
     else renderTable();
   }
 
@@ -789,7 +811,7 @@
   }
 
   async function carregarHistorico(reset = false) {
-    if (!sb) return;
+    if (!sb || !ehAdmin) return;   /* defesa dupla: sem admin, não lê */
     const alvo = $('#histBody');
     if (reset) {
       histCarregadas = 0;
@@ -863,6 +885,120 @@
     clearTimeout(hTimer);
     hTimer = setTimeout(() => carregarHistorico(true), 350);
   });
+
+  /* ---------- Usuários (só admin) ----------
+     A lista vem da tabela perfis. A criação passa pela função
+     `criar_usuario` (supabase/usuarios.sql), que é security definer
+     e só roda quando eh_admin() é verdade — quem não é admin
+     recebe erro do PRÓPRIO banco, não só a aba escondida. */
+  let usrCache = [];
+
+  function linhaUsuario(u) {
+    const papel = u.papel === 'admin'
+      ? '<span class="badge badge--insert">Admin</span>'
+      : '<span class="badge badge--corretor">Corretor</span>';
+    const souEu = String(u.id) === String(usuarioAtualId);
+    return `<tr>
+      <td data-label="Usuário"><div class="hist__what">
+        <strong>${esc(u.nome || '—')}</strong><span>${esc(u.email || '')}</span></div></td>
+      <td data-label="Papel">${papel}</td>
+      <td data-label="Criado em">${esc(quandoTxt(u.criado_em))}</td>
+      <td data-label="Ações" class="cell-actions cell-nolabel">
+        <button class="btn btn--outline btn--sm" data-usr="papel" data-id="${esc(u.id)}" type="button"${souEu ? ' disabled title="Você não pode alterar a própria conta"' : ''}>${u.papel === 'admin' ? 'Virar corretor' : 'Virar admin'}</button>
+      </td>
+    </tr>`;
+  }
+
+  async function carregarUsuarios(reset = false) {
+    if (!sb || !ehAdmin) return;              /* defesa dupla: sem admin, não lê */
+    const alvo = $('#usrBody');
+    if (reset) alvo.innerHTML = '<tr class="empty-row"><td colspan="4">Carregando…</td></tr>';
+    try {
+      const { data, error } = await sb.from('perfis')
+        .select('id, nome, email, papel, criado_em')
+        .order('criado_em', { ascending: true });
+      if (error) throw traduzErro(error);
+      usrCache = Array.isArray(data) ? data : [];
+      alvo.innerHTML = usrCache.length
+        ? usrCache.map(linhaUsuario).join('')
+        : '<tr class="empty-row"><td colspan="4">Nenhum usuário encontrado.</td></tr>';
+      $('#usrCount').textContent = `${usrCache.length} ${usrCache.length === 1 ? 'usuário' : 'usuários'}`;
+    } catch (e) {
+      alvo.innerHTML = `<tr class="empty-row"><td colspan="4">${esc(e.message || 'Não foi possível carregar os usuários.')}</td></tr>`;
+    }
+  }
+
+  /* Papel: admin <-> corretor (não deixa rebaixar a si mesmo) */
+  $('#usrBody').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-usr="papel"]');
+    if (!btn || btn.disabled) return;
+    const u = usrCache.find((x) => String(x.id) === String(btn.dataset.id));
+    if (!u) return;
+    const novo = u.papel === 'admin' ? 'corretor' : 'admin';
+    btn.disabled = true;
+    try {
+      const { error } = await sb.from('perfis').update({ papel: novo }).eq('id', u.id);
+      if (error) throw traduzErro(error);
+      toast(novo === 'admin'
+        ? `${u.nome || u.email} agora é admin.`
+        : `${u.nome || u.email} agora é corretor.`);
+      carregarUsuarios(true);
+    } catch (err) {
+      toast(err.message || 'Não foi possível alterar o papel.');
+      btn.disabled = false;
+    }
+  });
+
+  /* Erros específicos da criação de usuário */
+  function traduzErroUsuario(error) {
+    const m = String((error && error.message) || '');
+    if (error && error.code === '23505') return new Error('Já existe um usuário com esse e-mail.');
+    if (/already been registered|duplicate key/i.test(m)) return new Error('Já existe um usuário com esse e-mail.');
+    if (/could not find the function|PGRST202/i.test(m)) {
+      return new Error('Função “criar_usuario” não existe. Rode o supabase/usuarios.sql no SQL Editor.');
+    }
+    if (/apenas o administrador/i.test(m)) return new Error('Só o administrador pode criar usuários.');
+    if (/failed to fetch|networkerror/i.test(m)) return new Error('Sem conexão com o Supabase — nada foi criado.');
+    return new Error(m || 'Não foi possível criar o usuário.');
+  }
+
+  /* Criar usuário: passa pela função do banco (a segurança está lá) */
+  $('#userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('#userError');
+    const btn = $('#userBtn');
+    const nome = $('#u_nome').value.trim();
+    const email = $('#u_email').value.trim().toLowerCase();
+    const senha = $('#u_senha').value;
+    const papel = $('#u_papel').value;
+
+    let msg = '';
+    if (nome.length < 2) msg = 'Informe o nome do usuário.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) msg = 'Informe um e-mail válido.';
+    else if (senha.length < 6) msg = 'A senha precisa de ao menos 6 caracteres.';
+    if (msg) { err.textContent = msg; err.hidden = false; return; }
+    err.hidden = true;
+
+    btn.disabled = true;
+    btn.textContent = 'Criando…';
+    try {
+      const { error } = await sb.rpc('criar_usuario', {
+        p_email: email, p_senha: senha, p_nome: nome, p_papel: papel,
+      });
+      if (error) throw traduzErroUsuario(error);
+      $('#userForm').reset();
+      toast(`Usuário ${nome} criado como ${papel === 'admin' ? 'admin' : 'corretor'}!`);
+      carregarUsuarios(true);
+    } catch (erroCriar) {
+      err.textContent = erroCriar.message || 'Não foi possível criar o usuário.';
+      err.hidden = false;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Criar usuário';
+    }
+  });
+
+  $('#tabUsuarios').addEventListener('click', () => mostrarAba('usuarios'));
 
   /* ---------- Init ---------- */
   (async () => {
