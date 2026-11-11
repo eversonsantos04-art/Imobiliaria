@@ -305,6 +305,50 @@ create index if not exists idx_audit_registro   on public.audit_log (registro_id
 create index if not exists idx_perfis_papel     on public.perfis (papel);
 
 
+/* -----------------------------------------------------------------
+   10) CÓDIGO DE REFERÊNCIA: número que JAMAIS reutiliza (nem de
+       imóveis excluídos). O painel chama proximo_codigo().
+       Sem tabela nova: o próximo número sai dos imóveis atuais +
+       todo o histórico (audit_log), onde ficam os códigos também
+       dos imóveis já excluídos.
+   ----------------------------------------------------------------- */
+drop function if exists public.proximo_codigo(boolean);
+
+create or replace function public.proximo_codigo()
+returns text
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  max_atual integer;
+  prox integer;
+begin
+  -- maior código VL já emitido: imóveis de hoje + histórico inteiro
+  select coalesce(max(n), 0)
+    into max_atual
+  from (
+    select nullif(regexp_replace(codigo, '^VL-', ''), '')::int as n
+      from public.imoveis
+     where codigo ~ '^VL-[0-9]+$'
+    union all
+    select nullif(regexp_replace(dados_novos ->> 'codigo', '^VL-', ''), '')::int
+      from public.audit_log
+     where dados_novos ->> 'codigo' ~ '^VL-[0-9]+$'
+    union all
+    select nullif(regexp_replace(dados_antigos ->> 'codigo', '^VL-', ''), '')::int
+      from public.audit_log
+     where dados_antigos ->> 'codigo' ~ '^VL-[0-9]+$'
+  ) s;
+
+  prox := max_atual + 1;
+  return 'VL-' || lpad(prox::text, greatest(3, length(prox::text)), '0');
+end $$;
+
+revoke execute on function public.proximo_codigo() from public;
+revoke execute on function public.proximo_codigo() from anon;
+grant execute on function public.proximo_codigo() to authenticated;
+
+
 /* =================================================================
    FIM DO SCHEMA
    Proximo passo: rode supabase/seed.sql

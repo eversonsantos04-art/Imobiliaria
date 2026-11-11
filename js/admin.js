@@ -77,13 +77,17 @@
 
   /* ---------- Escritas ---------- */
   function traduzErro(error) {
-    if (error && error.code === '23505') return new Error('Já existe um imóvel com esse código. Escolha outro.');
-    const m = String((error && error.message) || '');
-    if (/failed to fetch|networkerror/i.test(m)) return new Error('Sem conexão com o Supabase — NADA foi salvo.');
-    if (/row-level security|row level security/i.test(m)) {
-      return new Error('Sem permissão para gravar. Confira se o supabase/schema.sql e o supabase/storage.sql foram rodados.');
+    let m;
+    if (error && error.code === '23505') m = 'Já existe um imóvel com esse código. Escolha outro.';
+    else {
+      const t = String((error && error.message) || '');
+      if (/failed to fetch|networkerror/i.test(t)) m = 'Sem conexão com o Supabase — NADA foi salvo.';
+      else if (/row-level security|row level security/i.test(t)) m = 'Sem permissão para gravar. Confira se o supabase/schema.sql e o supabase/storage.sql foram rodados.';
+      else m = t || 'Não foi possível salvar no Supabase.';
     }
-    return new Error(m || 'Não foi possível salvar no Supabase.');
+    const e = new Error(m);
+    if (error && error.code) e.code = error.code;   /* o 23505 precisa sobreviver p/ o retry do código */
+    return e;
   }
   async function inserirImovel(obj) {
     const { error } = await sb.from(TABELA).insert([paraLinha(obj)]);
@@ -97,6 +101,25 @@
     const { error } = await sb.from(TABELA).delete().eq('id', id);
     if (error) throw traduzErro(error);
     await apagarPasta(String(id));   /* as fotos vão junto (best effort) */
+  }
+
+  /* ---------- Código de referência ----------
+     O banco é quem manda: o próximo número é calculado sobre os
+     imóveis atuais + o histórico inteiro — um código emitido jamais
+     volta, nem de imóvel excluído (supabase/codigo_sequencia.sql).
+     Enquanto esse SQL não rodar, cai para o cálculo local. */
+  let sqlCodigo = null;   /* null = ainda não testou; false = SQL pendente */
+  async function gerarCodigo() {
+    if (sb && sqlCodigo !== false) {
+      try {
+        const { data, error } = await sb.rpc('proximo_codigo');
+        if (!error && data) { sqlCodigo = true; return data; }
+        if (error) sqlCodigo = false;   /* codigo_sequencia.sql ainda não rodou */
+      } catch (_) { sqlCodigo = false; }
+    }
+    const all = await getAll();
+    const codigos = window.VivaLarCodigos;
+    return codigos ? codigos.proximo(all) : '';
   }
 
   /* ---------- Fotos: Supabase Storage ---------- */
@@ -505,6 +528,7 @@
 
   /* ---------- Formulário (novo / editar) ---------- */
   let editId = null;
+  let codigoInicial = '';   /* o que veio pré-preenchido (serve p/ saber se o corretor mexeu) */
   let slots = [];
 
   function slotBase(im, n) {
@@ -571,9 +595,10 @@
     const im = id == null ? null : all.find((i) => String(i.id) === String(id));
     editId = im ? im.id : null;
     $('#formTitle').textContent = im ? 'Editar imóvel' : 'Novo imóvel';
-    $('#f_codigo').value = im
-      ? (im.codigo || '')
-      : (window.VivaLarCodigos ? window.VivaLarCodigos.proximo(all) : '');
+    /* Código já vem preenchido e travado: o banco calcula o próximo
+       número a partir dos imóveis + histórico */
+    codigoInicial = im ? (im.codigo || '') : await gerarCodigo();
+    $('#f_codigo').value = codigoInicial;
     $('#f_titulo').value = im?.titulo || '';
     $('#f_tipo').value = im?.tipo && TIPOS.includes(im.tipo) ? im.tipo : TIPOS[0];
     $('#f_operacao').value = im?.operacao === 'aluguel' ? 'aluguel' : 'venda';
@@ -611,11 +636,7 @@
     const uf = $('#f_uf').value.trim().toUpperCase();
     const preco = +$('#f_preco').value;
     const area = +$('#f_area').value;
-    const codigos = window.VivaLarCodigos;
-    const all = await getAll();
-    const codigo = codigos
-      ? codigos.texto($('#f_codigo').value)
-      : $('#f_codigo').value.trim().toUpperCase();
+    const ehNovo = editId == null;
     let msg = '';
     if (titulo.length < 3) msg = 'Informe um título com ao menos 3 caracteres.';
     else if (!cidade) msg = 'Informe a cidade.';
@@ -623,13 +644,15 @@
     else if (!/^[A-Z]{2}$/.test(uf)) msg = 'UF deve ter 2 letras (ex.: SP).';
     else if (!(preco > 0)) msg = 'Informe um preço válido maior que zero.';
     else if (!(area > 0)) msg = 'Informe uma área válida maior que zero.';
-    else if (codigo && codigos && !codigos.conferir(codigo)) msg = 'Código inválido. Use só letras, números e hífen (ex.: VL-001, AP-12, TEMP-3).';
-    else if (codigo && all.some((x) => String(x.codigo) === codigo && String(x.id) !== String(editId))) msg = `Já existe um imóvel com o código “${codigo}”. Escolha outro.`;
     if (msg) { err.textContent = msg; err.hidden = false; return; }
     err.hidden = true;
 
-    /* Em branco = gera o próximo código livre da sequência (ex.: VL-013) */
-    const finalCodigo = codigo || (codigos ? codigos.proximo(all) : '');
+    /* Campo travado: quem manda no código é o banco (qualquer valor na
+       tela é ignorado). Novo = número novo, calculado na hora de
+       salvar; editar = mantém o código de sempre. */
+    const finalCodigo = ehNovo
+      ? await gerarCodigo()
+      : (codigoInicial || await gerarCodigo());
     const tipo = $('#f_tipo').value;
     const idImovel = editId ?? novoId();
     const escolhidas = slots.filter(Boolean);   /* tira as posições vazias */
@@ -649,7 +672,6 @@
       fotos: [],
     };
 
-    const ehNovo = editId == null;
     if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando…'; }
     try {
       /* 1) fotos novas vão para o Storage; as já salvas ficam onde estão */
@@ -662,9 +684,25 @@
       }
       obj.fotos = urls;
 
-      /* 2) grava o imóvel (os triggers preenchem criado_por / alterado_por) */
-      if (ehNovo) await inserirImovel(obj);
-      else await atualizarImovel(editId, obj);
+      /* 2) grava o imóvel (os triggers preenchem criado_por / alterado_por).
+         Se o código gerado foi tomado nesse meio-tempo, pega o próximo
+         livre e tenta de novo — assim o cadastro nunca falha por código. */
+      if (ehNovo) {
+        let tentativa = 0;
+        for (;;) {
+          try {
+            await inserirImovel(obj);
+            break;
+          } catch (erroCod) {
+            const ocupado = erroCod && erroCod.code === '23505' && tentativa < 3;
+            if (!ocupado) throw erroCod;
+            tentativa++;
+            obj.codigo = await gerarCodigo();   /* próximo número (nunca reutilizado) */
+          }
+        }
+      } else {
+        await atualizarImovel(editId, obj);
+      }
 
       /* 3) remove do Storage o que saiu do formulário */
       await limparPasta(String(idImovel), urls);
@@ -679,7 +717,7 @@
 
     closeModal($('#formModal'));
     atualizarVista();
-    toast(ehNovo ? `Imóvel cadastrado! Código ${finalCodigo}` : 'Alterações salvas!');
+    toast(ehNovo ? `Imóvel cadastrado! Código ${finalCodigo} (gerado automaticamente)` : 'Alterações salvas!');
   });
 
   /* ---------- Histórico (audit_log) ----------
