@@ -212,6 +212,7 @@
   const loginView = $('#loginView');
   const dashView = $('#dashView');
   const btnSair = $('#btnSair');
+  const userChip = $('#userChip');   /* nome de quem está logado (topo) */
 
   /* Cliente Supabase — a URL e a chave vêm de js/supabase-config.js
      e o supabase-js vem do CDN (ver as tags no fim do admin.html) */
@@ -230,6 +231,7 @@
     loginView.hidden = false;
     dashView.hidden = true;
     btnSair.hidden = true;
+    userChip.hidden = true;
     pararLock();
   }
   function showDash() {
@@ -245,11 +247,45 @@
     el.textContent = msg;
     el.hidden = false;
   }
+  /* Mostra no topo quem está logado: nome da tabela perfis (ou o e-mail) */
+  async function pintarUsuario() {
+    let user = null;
+    try {
+      const { data } = await sb.auth.getSession();
+      user = data && data.session && data.session.user;
+    } catch (_) { user = null; }
+    if (!user) { userChip.hidden = true; return; }
+
+    const email = user.email || '';
+    let nome = '';
+    let papel = '';
+    try {
+      const { data: perfil } = await sb
+        .from('perfis').select('nome, papel').eq('id', user.id).maybeSingle();
+      if (perfil) { nome = perfil.nome || ''; papel = perfil.papel || ''; }
+    } catch (_) { /* sem rede: fica com o e-mail mesmo */ }
+
+    /* Sem nome no perfil, usa o e-mail (com a 1ª maiúscula) */
+    if (!nome) {
+      const meta = user.user_metadata || {};
+      nome = String(meta.nome || meta.full_name || email.split('@')[0] || 'Corretor');
+      nome = nome.charAt(0).toUpperCase() + nome.slice(1);
+    }
+
+    userChip.innerHTML =
+      `<span class="userchip__nome">${esc(nome)}</span>` +
+      (papel === 'admin' ? '<span class="userchip__papel">Admin</span>' : '') +
+      `<span class="userchip__mail">${esc(email)}</span>`;
+    userChip.title = `Sessão de ${email}`;
+    userChip.hidden = false;
+  }
+
   function entrar() {
     abrirSessao();
     $('#loginError').hidden = true;
     $('#loginForm').reset();
     showDash();
+    pintarUsuario();
     toast('Bem-vindo ao painel!');
   }
 
@@ -837,7 +873,7 @@
     }
     try {
       const { data } = await sb.auth.getSession();
-      if (data && data.session) { abrirSessao(); showDash(); }
+      if (data && data.session) { abrirSessao(); showDash(); pintarUsuario(); }
       else showLogin();
     } catch (_) {
       showLogin();

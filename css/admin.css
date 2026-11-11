@@ -40,6 +40,20 @@ a { color: inherit; }
 .topbar__nav button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 9px; padding: .5rem 1rem; font: 600 .85rem var(--font-body); cursor: pointer; }
 .topbar__nav button:hover { background: rgba(255,255,255,.22); }
 
+/* Chip com o usuário logado (topo do painel) */
+.userchip {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 46vw;
+  background: rgba(255,255,255,.12); border-radius: 999px; padding: .35rem .8rem;
+  font: 600 .85rem var(--font-body); color: #e7efec;
+}
+.userchip__nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.userchip__papel {
+  background: var(--accent); color: #2a1c04; font-size: .62rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em; padding: .14rem .5rem; border-radius: 999px;
+}
+.userchip__mail { color: #9fb3ad; font-weight: 400; font-size: .74rem; }
+@media (max-width: 760px) { .userchip__mail { display: none; } }
+
 .wrap { width: min(1180px, 94%); margin-inline: auto; padding: 32px 0 64px; }
 
 /* Botões */

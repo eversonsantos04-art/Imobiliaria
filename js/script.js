@@ -6,8 +6,11 @@
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
   const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
-  /* ---------- Dados ---------- */
-  /* ---------- Dados: semente (js/dados.js) + alterações do painel admin ---------- */
+  /* ---------- Dados ----------
+     O catálogo vem do Supabase (a mesma tabela que o painel admin grava).
+     1) Pinta na hora com a semente/local, para não deixar a página vazia;
+     2) Depois troca pelos dados reais do banco;
+     3) Se a rede ou o Supabase falhar, mantém o que já está na tela. */
   const CHAVE_DADOS = 'vivalar_imoveis';
   const G_MAX = 5;
 
@@ -32,9 +35,40 @@
     return (window.VivaLarCodigos ? window.VivaLarCodigos.normalizar(base) : base);
   }
   let IMOVEIS = carregarImoveis();
-  /* Atualiza o catálogo na hora se o admin salvar em outra aba */
+  /* Atualiza na hora se o painel admin salvar em outra aba (modo local) */
   window.addEventListener('storage', (e) => {
     if (e.key === CHAVE_DADOS) { IMOVEIS = carregarImoveis(); render(); }
+  });
+
+  /* No banco a coluna se chama `descricao`; no site usamos `desc` */
+  function deLinha(r) {
+    return { ...r, desc: (r && r.descricao) || '' };
+  }
+
+  /* Lê o catálogo no Supabase. Devolve `null` quando não foi possível
+     (rede fora, chave errada…) — aí o site continua com o que já tem. */
+  async function carregarRemoto() {
+    if (!window.supabase || !window.SUPABASE_URL || !window.SUPABASE_PUBLISHABLE_KEY) return null;
+    try {
+      const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY);
+      const { data, error } = await sb.from('imoveis')
+        .select('*')
+        .order('criado_em', { ascending: false })
+        .order('codigo', { ascending: true });
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /* Troca a semente pelos dados reais assim que chegarem */
+  carregarRemoto().then((remoto) => {
+    if (!remoto) return;                       /* falhou: mantém a tela como está */
+    IMOVEIS = window.VivaLarCodigos
+      ? window.VivaLarCodigos.normalizar(remoto.map(deLinha))
+      : remoto.map(deLinha);
+    render();
   });
 
   const DEPOIMENTOS = [
