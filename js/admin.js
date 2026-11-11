@@ -25,6 +25,7 @@
 
   /* ---------- Storage: Supabase (com queda para o local se a rede cair) ---------- */
   const TABELA = 'imoveis';
+  const BUCKET = 'imoveis';   /* pasta das fotos — criada por supabase/storage.sql */
 
   function seed() {
     return (window.VivaLarSeed || []).map((im) => ({ ...im, feats: [...(im.feats || [])] }));
@@ -79,6 +80,9 @@
     if (error && error.code === '23505') return new Error('Já existe um imóvel com esse código. Escolha outro.');
     const m = String((error && error.message) || '');
     if (/failed to fetch|networkerror/i.test(m)) return new Error('Sem conexão com o Supabase — NADA foi salvo.');
+    if (/row-level security|row level security/i.test(m)) {
+      return new Error('Sem permissão para gravar. Confira se o supabase/schema.sql e o supabase/storage.sql foram rodados.');
+    }
     return new Error(m || 'Não foi possível salvar no Supabase.');
   }
   async function inserirImovel(obj) {
@@ -92,6 +96,72 @@
   async function excluirImovel(id) {
     const { error } = await sb.from(TABELA).delete().eq('id', id);
     if (error) throw traduzErro(error);
+    await apagarPasta(String(id));   /* as fotos vão junto (best effort) */
+  }
+
+  /* ---------- Fotos: Supabase Storage ---------- */
+  function novoId() {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    const b = new Uint8Array(16);
+    window.crypto.getRandomValues(b);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+
+  function dataURLparaBlob(dataUrl) {
+    const [cabecalho, b64] = String(dataUrl).split(',');
+    const tipo = (cabecalho.match(/data:(.*?);/) || [])[1] || 'image/jpeg';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: tipo });
+  }
+
+  function urlPublica(caminho) {
+    return `${window.SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${caminho}`;
+  }
+
+  /* Envia uma foto já otimizada e devolve a URL pública definitiva */
+  async function subirFoto(caminho, dataUrl) {
+    const blob = dataURLparaBlob(dataUrl);
+    const { error } = await sb.storage.from(BUCKET).upload(caminho, blob, {
+      contentType: blob.type || 'image/jpeg',
+      upsert: true,                 /* re-salvar sobrescreve: não acumula lixo */
+    });
+    if (error) throw traduzErro(error);
+    return urlPublica(caminho);
+  }
+
+  async function listarArquivos(pasta) {
+    try {
+      const { data, error } = await sb.storage.from(BUCKET).list(pasta, { limit: 200 });
+      if (error || !Array.isArray(data)) return [];
+      return data.filter((a) => a && a.name).map((a) => `${pasta}/${a.name}`);
+    } catch (_) { return []; }
+  }
+
+  async function apagarPasta(pasta) {
+    try {
+      const arqs = await listarArquivos(pasta);
+      if (arqs.length) await sb.storage.from(BUCKET).remove(arqs);
+    } catch (_) { /* limpeza nunca bloqueia o cadastro */ }
+  }
+
+  /* Depois de salvar, apaga do Storage o que saiu do formulário */
+  async function limparPasta(pasta, urlsManter) {
+    try {
+      const arqs = await listarArquivos(pasta);
+      if (!arqs.length) return;
+      const manter = new Set(
+        (urlsManter || [])
+          .filter((u) => String(u).includes(`/object/public/${BUCKET}/`))
+          .map((u) => String(u).split(`/object/public/${BUCKET}/`)[1])
+      );
+      const sobra = arqs.filter((c) => !manter.has(c));
+      if (sobra.length) await sb.storage.from(BUCKET).remove(sobra);
+    } catch (_) { /* best effort */ }
   }
   function logado() {
     try {
@@ -513,9 +583,10 @@
     /* Em branco = gera o próximo código livre da sequência (ex.: VL-013) */
     const finalCodigo = codigo || (codigos ? codigos.proximo(all) : '');
     const tipo = $('#f_tipo').value;
-    const fotos = [...slots];
-    while (fotos.length && !fotos[fotos.length - 1]) fotos.pop();
+    const idImovel = editId ?? novoId();
+    const escolhidas = slots.filter(Boolean);   /* tira as posições vazias */
     const obj = {
+      id: idImovel,
       codigo: finalCodigo,
       titulo, tipo,
       operacao: $('#f_operacao').value,
@@ -527,15 +598,30 @@
       cor: CORES[tipo] || ['#0e7c66', '#14b8a6'],
       desc: $('#f_desc').value.trim(),
       feats: $('#f_feats').value.split('\n').map((s) => s.trim()).filter(Boolean),
-      fotos,
+      fotos: [],
     };
 
     const ehNovo = editId == null;
     if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando…'; }
     try {
+      /* 1) fotos novas vão para o Storage; as já salvas ficam onde estão */
+      const urls = [];
+      for (let i = 0; i < escolhidas.length; i++) {
+        const src = escolhidas[i];
+        urls.push(src.startsWith('data:')
+          ? await subirFoto(`${idImovel}/${i + 1}.jpg`, src)
+          : src);
+      }
+      obj.fotos = urls;
+
+      /* 2) grava o imóvel (os triggers preenchem criado_por / alterado_por) */
       if (ehNovo) await inserirImovel(obj);
       else await atualizarImovel(editId, obj);
+
+      /* 3) remove do Storage o que saiu do formulário */
+      await limparPasta(String(idImovel), urls);
     } catch (erroSalvar) {
+      if (ehNovo) await apagarPasta(String(idImovel));   /* não deixa foto órfã */
       err.textContent = erroSalvar.message || 'Não foi possível salvar.';
       err.hidden = false;
       return;
