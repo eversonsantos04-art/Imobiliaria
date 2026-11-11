@@ -1,26 +1,18 @@
-/* Corretores de Imóveis — Painel administrativo (CRUD com persistência local) */
+/* Corretores de Imóveis — Painel administrativo (CRUD no Supabase) */
 (function () {
   'use strict';
 
-  /* SEGURANÇA — nenhuma senha fica no código nem no site.
-     Na primeira abertura o painel pede para criar uma senha: só o hash
-     (com sal, derivado por SHA-256) fica gravado no navegador.
-     A sessão expira sozinha e a tela bloqueia após inatividade.
-     Esqueceu a senha? No console do navegador:
-       localStorage.removeItem('vivalar_admin_cred');
-     (reabre a criação de senha e NÃO apaga os imóveis).
-     Isso protege o painel neste navegador. Na versão publicada, some a
-     proteção do servidor (Basic Auth / Cloudflare Access) e, quando
-     precisar de vários aparelhos, migre para backend com auth real. */
-  const CRED = 'vivalar_admin_cred';
-  const TENT = 'vivalar_admin_tent';
+  /* SEGURANÇA — o acesso usa Supabase Auth (e-mail + senha).
+     Nenhuma senha fica neste arquivo: o hash é do Supabase.
+     Quem pode ler/escrever cada tabela é definido pelo RLS
+     (supabase/schema.sql) — esconder o HTML não protege nada.
+     Criar ou remover usuários: Supabase -> Authentication -> Users
+     (no nosso fluxo, só o admin cria contas).
+     O auto-lock de 15 min daqui é conforto de uso, não segurança. */
   const CHAVE = 'vivalar_imoveis';
   const SESSAO = 'vivalar_admin';
   const TTL_SESSAO = 30 * 60 * 1000;   /* sessão de 30 min, renovada ao usar */
   const AUTO_LOCK = 15 * 60 * 1000;    /* bloqueia após 15 min sem mexer */
-  const MAX_TENT = 5;                  /* senhas erradas antes do bloqueio */
-  const BLOQUEIO = 30 * 1000;          /* 30 s de bloqueio */
-  const ITER = 60000;                  /* custo da derivação da senha */
   const G_MAX = 5;
   const TIPOS = ['Apartamento', 'Casa', 'Cobertura', 'Loft', 'Sala Comercial', 'Terreno'];
 
@@ -31,30 +23,75 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 
-  /* ---------- Storage ---------- */
+  /* ---------- Storage: Supabase (com queda para o local se a rede cair) ---------- */
+  const TABELA = 'imoveis';
+
   function seed() {
     return (window.VivaLarSeed || []).map((im) => ({ ...im, feats: [...(im.feats || [])] }));
   }
-  function getAll() {
-    let salvo = null;
+
+  /* linha do banco -> objeto do formulário: "descricao" vira "desc" */
+  function deLinha(r) {
+    if (!r) return r;
+    const { descricao, ...resto } = r;
+    return { ...resto, desc: descricao || '' };
+  }
+  /* objeto do formulário -> linha do banco: "desc" vira "descricao" */
+  function paraLinha(o) {
+    const { desc, ...resto } = o;
+    return { ...resto, descricao: desc || '' };
+  }
+
+  function localGuardado() {
     try {
       const raw = localStorage.getItem(CHAVE);
       if (raw) {
         const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) salvo = arr;
+        if (Array.isArray(arr)) return arr;
       }
     } catch (_) { /* indisponível */ }
-    const codigos = window.VivaLarCodigos;
-    if (!codigos) return Array.isArray(salvo) ? salvo : seed();
-    const lista = codigos.normalizar(Array.isArray(salvo) ? salvo : seed());
-    /* Guarda os códigos gerados para não mudarem entre sessões */
-    if (Array.isArray(salvo) && lista.some((im, i) => im !== salvo[i])) {
-      try { saveAll(lista); } catch (_) { /* storage cheio */ }
-    }
-    return lista;
+    return null;
   }
-  function saveAll(arr) {
-    localStorage.setItem(CHAVE, JSON.stringify(arr));
+
+  /* Mais novo primeiro; o desempate por código mantém a semente em ordem */
+  async function getAll() {
+    if (sb) {
+      try {
+        const { data, error } = await sb
+          .from(TABELA)
+          .select('*')
+          .order('criado_em', { ascending: false })
+          .order('codigo', { ascending: true });
+        if (error) throw error;
+        const lista = (data || []).map(deLinha);
+        if (lista.length) return lista;
+        /* banco vazio (seed ainda não rodou): cai para o local */
+      } catch (_) { /* rede/RLS fora do ar: usa o fallback abaixo */ }
+    }
+    const salvo = localGuardado();
+    const base = Array.isArray(salvo) ? salvo : seed();
+    const codigos = window.VivaLarCodigos;
+    return codigos ? codigos.normalizar(base) : base;
+  }
+
+  /* ---------- Escritas ---------- */
+  function traduzErro(error) {
+    if (error && error.code === '23505') return new Error('Já existe um imóvel com esse código. Escolha outro.');
+    const m = String((error && error.message) || '');
+    if (/failed to fetch|networkerror/i.test(m)) return new Error('Sem conexão com o Supabase — NADA foi salvo.');
+    return new Error(m || 'Não foi possível salvar no Supabase.');
+  }
+  async function inserirImovel(obj) {
+    const { error } = await sb.from(TABELA).insert([paraLinha(obj)]);
+    if (error) throw traduzErro(error);
+  }
+  async function atualizarImovel(id, obj) {
+    const { error } = await sb.from(TABELA).update(paraLinha(obj)).eq('id', id);
+    if (error) throw traduzErro(error);
+  }
+  async function excluirImovel(id) {
+    const { error } = await sb.from(TABELA).delete().eq('id', id);
+    if (error) throw traduzErro(error);
   }
   function logado() {
     try {
@@ -78,126 +115,6 @@
     toast._t = setTimeout(() => { toastEl.hidden = true; }, 3500);
   }
 
-  /* ---------- SHA-256 puro (funciona em file://, http e https) ----------
-     Testado contra os vetores oficiais do NIST e contra o OpenSSL. */
-  const SHA_K = [
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
-  ];
-  function sha256Hex(txt) {
-    const msg = new TextEncoder().encode(txt);
-    const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
-    const len = msg.length;
-    const total = (((len + 8) >> 6) + 1) << 6;
-    const data = new Uint8Array(total);
-    data.set(msg);
-    data[len] = 0x80;
-    const bits = len * 8;
-    const hi = Math.floor(bits / 0x100000000);
-    const lo = bits >>> 0;
-    data[total - 8] = (hi >>> 24) & 0xff;
-    data[total - 7] = (hi >>> 16) & 0xff;
-    data[total - 6] = (hi >>> 8) & 0xff;
-    data[total - 5] = hi & 0xff;
-    data[total - 4] = (lo >>> 24) & 0xff;
-    data[total - 3] = (lo >>> 16) & 0xff;
-    data[total - 2] = (lo >>> 8) & 0xff;
-    data[total - 1] = lo & 0xff;
-    const w = new Int32Array(64);
-    for (let off = 0; off < total; off += 64) {
-      for (let i = 0; i < 16; i++) {
-        const j = off + i * 4;
-        w[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | data[j + 3];
-      }
-      for (let i = 16; i < 64; i++) {
-        const a15 = w[i - 15];
-        const a2 = w[i - 2];
-        const s0 = ((a15 >>> 7) | (a15 << 25)) ^ ((a15 >>> 18) | (a15 << 14)) ^ (a15 >>> 3);
-        const s1 = ((a2 >>> 17) | (a2 << 15)) ^ ((a2 >>> 19) | (a2 << 13)) ^ (a2 >>> 10);
-        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
-      }
-      let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
-      for (let i = 0; i < 64; i++) {
-        const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
-        const ch = (e & f) ^ (~e & g);
-        const t1 = (h + S1 + ch + SHA_K[i] + w[i]) | 0;
-        const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
-        const maj = (a & b) ^ (a & c) ^ (b & c);
-        const t2 = (S0 + maj) | 0;
-        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
-      }
-      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
-      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
-    }
-    let out = '';
-    for (let i = 0; i < 8; i++) out += (H[i] >>> 0).toString(16).padStart(8, '0');
-    return out;
-  }
-
-  /* ---------- Credencial: só o hash com sal fica gravado ---------- */
-  function derivarSenha(senha, salt, iter) {
-    let h = sha256Hex(salt + ':' + senha);
-    for (let i = 0; i < iter; i++) h = sha256Hex(salt + ':' + h + ':' + i);
-    return h;
-  }
-  function mesmaHash(a, b) {
-    if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
-    let d = 0;
-    for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-    return d === 0;
-  }
-  function lerCred() {
-    try {
-      const c = JSON.parse(localStorage.getItem(CRED) || 'null');
-      if (c && typeof c.salt === 'string' && typeof c.hash === 'string') return c;
-    } catch (_) { /* storage indisponível */ }
-    return null;
-  }
-  function criarCred(senha) {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    let salt = '';
-    for (const b of bytes) salt += b.toString(16).padStart(2, '0');
-    try {
-      localStorage.setItem(CRED, JSON.stringify({
-        salt,
-        hash: derivarSenha(senha, salt, ITER),
-        iter: ITER,
-        criadoEm: new Date().toISOString(),
-      }));
-      return true;
-    } catch (_) { return false; }
-  }
-
-  /* ---------- Tentativas erradas ---------- */
-  function lerTent() {
-    try {
-      const t = JSON.parse(localStorage.getItem(TENT) || 'null');
-      if (t && typeof t.n === 'number') return t;
-    } catch (_) { /* storage indisponível */ }
-    return { n: 0, ate: 0 };
-  }
-  function bloqueadoAte() { return lerTent().ate || 0; }
-  function registrarTentativa() {
-    const agora = Date.now();
-    const t = lerTent();
-    /* zera a contagem só quando um bloqueio anterior já expirou */
-    const expirouBloqueio = t.ate > 0 && t.ate <= agora;
-    t.n = (expirouBloqueio ? 0 : t.n) + 1;
-    if (t.n >= MAX_TENT) { t.n = 0; t.ate = agora + BLOQUEIO; } else { t.ate = 0; }
-    try { localStorage.setItem(TENT, JSON.stringify(t)); } catch (_) {}
-    return { n: t.n, bloqueado: t.ate > agora };
-  }
-  function limparTentativas() {
-    try { localStorage.removeItem(TENT); } catch (_) {}
-  }
-
   /* ---------- Auto-lock (bloqueio por inatividade) ---------- */
   let relogioLock = null;
   let ultimoUso = 0;
@@ -207,6 +124,7 @@
     if (!logado()) return;
     relogioLock = setTimeout(() => {
       encerrarSessao();
+      if (sb) sb.auth.signOut({ scope: 'local' }).catch(() => { /* offline */ });
       showLogin();
       toast('Tela bloqueada por inatividade.');
     }, AUTO_LOCK);
@@ -225,20 +143,16 @@
   const dashView = $('#dashView');
   const btnSair = $('#btnSair');
 
-  /* Ajusta o cartão entre "criar senha" (1ª abertura) e "entrar" */
+  /* Cliente Supabase — a URL e a chave vêm de js/supabase-config.js
+     e o supabase-js vem do CDN (ver as tags no fim do admin.html) */
+  const sb = (window.supabase && window.SUPABASE_URL)
+    ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY)
+    : null;
+
   function pintarLogin() {
-    const setup = !lerCred();
-    $('#loginTitle').textContent = setup ? 'Crie sua senha de acesso' : 'Acesso restrito';
-    $('#loginSub').textContent = setup
-      ? 'Primeira abertura deste navegador. Escolha uma senha forte — ela não está gravada em nenhum lugar além daqui.'
-      : 'Entre com a senha deste navegador para gerenciar o catálogo.';
-    $('#fieldPass2').hidden = !setup;
-    $('#loginPass2').required = setup;
-    $('#loginBtn').textContent = setup ? 'Criar senha e entrar' : 'Entrar no painel';
-    $('#loginHint').textContent = setup
-      ? 'Mínimo de 8 caracteres. Anote a senha: ela protege este painel neste navegador.'
-      : 'A sessão expira sozinha e a tela bloqueia após 15 minutos sem uso.';
-    $('#loginPass').autocomplete = setup ? 'new-password' : 'current-password';
+    $('#loginTitle').textContent = 'Acesso restrito';
+    $('#loginSub').textContent = 'Entre com o seu e-mail e senha para gerenciar o catálogo.';
+    $('#loginHint').textContent = 'A sessão expira sozinha e a tela bloqueia após 15 minutos sem uso.';
   }
 
   function showLogin() {
@@ -269,42 +183,45 @@
     toast('Bem-vindo ao painel!');
   }
 
-  $('#loginForm').addEventListener('submit', (e) => {
+  /* Traduz os erros do Supabase para português */
+  function msgErroLogin(err) {
+    const m = String((err && err.message) || err || '');
+    if (/invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+    if (/email not confirmed/i.test(m)) return 'E-mail não confirmado. Peça ao admin para confirmar no Supabase.';
+    if (/rate limit|too many request/i.test(m)) return 'Muitas tentativas. Aguarde um minuto e tente de novo.';
+    if (/failed to fetch|networkerror/i.test(m)) return 'Sem conexão com o Supabase. Verifique a internet.';
+    return m || 'Não foi possível entrar. Tente novamente.';
+  }
+
+  $('#loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const email = $('#loginEmail').value.trim();
     const senha = $('#loginPass').value;
 
-    const ate = bloqueadoAte();
-    if (ate > Date.now()) {
-      erro(`Muitas tentativas erradas. Aguarde ${Math.ceil((ate - Date.now()) / 1000)} s.`);
-      return;
-    }
+    if (!sb) { erro('Não foi possível carregar o Supabase. Recarregue a página (F5).'); return; }
+    if (!email) { erro('Informe o seu e-mail.'); return; }
+    if (!senha) { erro('Informe a sua senha.'); return; }
 
-    if (!lerCred()) {                       /* 1ª abertura: criar a senha */
-      if (senha.length < 8) { erro('Crie uma senha com pelo menos 8 caracteres.'); return; }
-      if (senha !== $('#loginPass2').value) { erro('As senhas não conferem.'); return; }
-      if (!criarCred(senha) || !lerCred()) {
-        erro('Não foi possível salvar a senha neste navegador (armazenamento bloqueado ou cheio).');
+    const btn = $('#loginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+      if (error) {
+        $('#loginPass').value = '';
+        $('#loginPass').focus();
+        erro(msgErroLogin(error));
         return;
       }
       entrar();
-      return;
-    }
-
-    const cred = lerCred();
-    const calc = derivarSenha(senha, cred.salt, cred.iter || ITER);
-    if (mesmaHash(calc, cred.hash)) {
-      limparTentativas();
-      entrar();
-    } else {
-      const t = registrarTentativa();
-      $('#loginPass').value = '';
-      $('#loginPass').focus();
-      erro(t.bloqueado
-        ? `Senha incorreta. Por segurança, o acesso fica bloqueado por ${BLOQUEIO / 1000} s.`
-        : `Senha incorreta. Restam ${MAX_TENT - t.n} tentativa(s) antes do bloqueio.`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar no painel';
     }
   });
-  btnSair.addEventListener('click', () => {
+
+  btnSair.addEventListener('click', async () => {
+    if (sb) { try { await sb.auth.signOut({ scope: 'local' }); } catch (_) { /* offline */ } }
     encerrarSessao();
     showLogin();
   });
@@ -330,8 +247,8 @@
     return im.operacao === 'aluguel' ? `${BRL.format(im.preco || 0)}/mês` : BRL.format(im.preco || 0);
   }
 
-  function renderTable() {
-    const all = getAll();
+  async function renderTable() {
+    const all = await getAll();
     const q = $('#q').value.trim().toLowerCase();
     const op = $('#fOp').value;
     const list = all.filter((im) =>
@@ -424,19 +341,47 @@
     closeModal($('#confirmModal'));
     if (pending) { pending(); pending = null; }
   });
-  function askDelete(id) {
-    const im = getAll().find((i) => String(i.id) === String(id));
-    ask(`Excluir “${im ? im.titulo : ''}” do catálogo? Essa ação não pode ser desfeita.`, () => {
-      saveAll(getAll().filter((i) => String(i.id) !== String(id)));
+  async function askDelete(id) {
+    const all = await getAll();
+    const im = all.find((i) => String(i.id) === String(id));
+    ask(`Excluir “${im ? im.titulo : ''}” do catálogo? Sai da lista, mas continua guardado no histórico.`, async () => {
+      try {
+        await excluirImovel(id);
+        toast('Imóvel excluído.');
+      } catch (err) {
+        toast(err.message || 'Não foi possível excluir.');
+      }
       renderTable();
-      toast('Imóvel excluído.');
     });
   }
+
+  /* Restaurar padrão: apaga tudo e recoloca a semente de 12 imóveis.
+     O audit_log preserva todas as linhas apagadas. */
   $('#btnReset').addEventListener('click', () => {
-    ask('Descartar todas as alterações e voltar ao catálogo original?', () => {
-      try { localStorage.removeItem(CHAVE); } catch (_) {}
+    ask('Descartar TODOS os imóveis e voltar ao catálogo original (12 imóveis)? O histórico é mantido.', async () => {
+      try {
+        if (sb) {
+          const { error: erroApagar } = await sb.from(TABELA)
+            .delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          if (erroApagar) throw traduzErro(erroApagar);
+
+          const bruta = (window.VivaLarSeed || []).map((s) => {
+            const { id, ...semId } = s;
+            return { ...semId, fotos: [1, 2, 3].map((n) => `assets/img/imovel-${id}-${n}.jpg`) };
+          });
+          const codigos = window.VivaLarCodigos;
+          const semente = (codigos ? codigos.normalizar(bruta) : bruta).map(paraLinha);
+          if (semente.length) {
+            const { error: erroIns } = await sb.from(TABELA).insert(semente);
+            if (erroIns) throw traduzErro(erroIns);
+          }
+        }
+        try { localStorage.removeItem(CHAVE); } catch (_) {}
+        toast('Catálogo original restaurado.');
+      } catch (err) {
+        toast(err.message || 'Não foi possível restaurar.');
+      }
       renderTable();
-      toast('Catálogo original restaurado.');
     });
   });
 
@@ -503,8 +448,8 @@
     });
   }
 
-  function openForm(id) {
-    const all = getAll();
+  async function openForm(id) {
+    const all = await getAll();
     const im = id == null ? null : all.find((i) => String(i.id) === String(id));
     editId = im ? im.id : null;
     $('#formTitle').textContent = im ? 'Editar imóvel' : 'Novo imóvel';
@@ -538,9 +483,10 @@
     Cobertura: ['#1d4ed8', '#38bdf8'], Loft: ['#be123c', '#fb7185'],
     'Sala Comercial': ['#475569', '#94a3b8'], Terreno: ['#65a30d', '#a3e635'],
   };
-  $('#imovelForm').addEventListener('submit', (e) => {
+  $('#imovelForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const err = $('#formError');
+    const btnSalvar = e.submitter || $('#imovelForm').querySelector('button[type="submit"]');
     const titulo = $('#f_titulo').value.trim();
     const cidade = $('#f_cidade').value.trim();
     const bairro = $('#f_bairro').value.trim();
@@ -548,7 +494,7 @@
     const preco = +$('#f_preco').value;
     const area = +$('#f_area').value;
     const codigos = window.VivaLarCodigos;
-    const all = getAll();
+    const all = await getAll();
     const codigo = codigos
       ? codigos.texto($('#f_codigo').value)
       : $('#f_codigo').value.trim().toUpperCase();
@@ -570,7 +516,6 @@
     const fotos = [...slots];
     while (fotos.length && !fotos[fotos.length - 1]) fotos.pop();
     const obj = {
-      id: editId ?? `n${Date.now()}`,
       codigo: finalCodigo,
       titulo, tipo,
       operacao: $('#f_operacao').value,
@@ -584,24 +529,42 @@
       feats: $('#f_feats').value.split('\n').map((s) => s.trim()).filter(Boolean),
       fotos,
     };
-    if (editId == null) all.unshift(obj);
-    else {
-      const i = all.findIndex((x) => String(x.id) === String(editId));
-      if (i >= 0) all[i] = { ...all[i], ...obj, id: all[i].id };
-    }
+
+    const ehNovo = editId == null;
+    if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando…'; }
     try {
-      saveAll(all);
-    } catch (_) {
-      err.textContent = 'Não foi possível salvar: armazenamento cheio. Remova fotos ou use imagens menores.';
+      if (ehNovo) await inserirImovel(obj);
+      else await atualizarImovel(editId, obj);
+    } catch (erroSalvar) {
+      err.textContent = erroSalvar.message || 'Não foi possível salvar.';
       err.hidden = false;
       return;
+    } finally {
+      if (btnSalvar) { btnSalvar.disabled = false; btnSalvar.textContent = 'Salvar imóvel'; }
     }
+
     closeModal($('#formModal'));
     renderTable();
-    toast(editId == null ? `Imóvel cadastrado! Código ${finalCodigo}` : 'Alterações salvas!');
+    toast(ehNovo ? `Imóvel cadastrado! Código ${finalCodigo}` : 'Alterações salvas!');
   });
 
   /* ---------- Init ---------- */
-  if (logado()) showDash();
-  else showLogin();
+  (async () => {
+    if (!sb) {
+      showLogin();
+      erro('Não foi possível carregar o Supabase. Verifique a internet e recarregue (F5).');
+      return;
+    }
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session) { abrirSessao(); showDash(); }
+      else showLogin();
+    } catch (_) {
+      showLogin();
+    }
+    /* Sai sozinho quando a sessão expirar no servidor (refresh falhou) */
+    sb.auth.onAuthStateChange((evento) => {
+      if (evento === 'SIGNED_OUT') { encerrarSessao(); showLogin(); }
+    });
+  })();
 })();

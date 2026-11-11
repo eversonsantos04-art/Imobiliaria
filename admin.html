@@ -23,23 +23,22 @@
   </header>
 
   <main class="wrap">
-    <!-- ===== Login ===== -->
-    <!-- Na 1ª abertura o painel pede para criar a senha; não há senha no código -->
+    <!-- ===== Login (Supabase Auth: e-mail + senha) ===== -->
     <section id="loginView" class="login" hidden>
       <form class="login__card" id="loginForm" novalidate>
         <h1 id="loginTitle">Acesso restrito</h1>
-        <p id="loginSub">Entre com a senha deste navegador para gerenciar o catálogo.</p>
+        <p id="loginSub">Entre com o seu e-mail e senha para gerenciar o catálogo.</p>
+        <div class="field">
+          <label for="loginEmail">E-mail</label>
+          <input type="email" id="loginEmail" autocomplete="username" placeholder="voce@imobiliaria.com" required>
+        </div>
         <div class="field">
           <label for="loginPass">Senha</label>
           <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••" required>
         </div>
-        <div class="field" id="fieldPass2" hidden>
-          <label for="loginPass2">Repita a senha</label>
-          <input type="password" id="loginPass2" autocomplete="new-password" placeholder="••••••">
-        </div>
         <p class="login__error" id="loginError" role="alert" hidden></p>
         <button class="btn btn--primary btn--block" type="submit" id="loginBtn">Entrar no painel</button>
-        <p class="login__hint" id="loginHint">A senha é criada por você e fica guardada apenas neste navegador.</p>
+        <p class="login__hint" id="loginHint">A sessão expira sozinha e a tela bloqueia após 15 minutos sem uso.</p>
       </form>
     </section>
 
@@ -136,6 +135,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
   <script src="js/dados.js"></script>
   <script src="js/admin.js"></script>
 </body>
