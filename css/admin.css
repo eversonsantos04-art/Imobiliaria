@@ -130,6 +130,10 @@ textarea { resize: vertical; }
 .badge { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .28rem .65rem; border-radius: 999px; color: #fff; white-space: nowrap; }
 .badge--venda { background: #0e7c66; }
 .badge--aluguel { background: #7c3aed; }
+.badge--ativo { background: #16a34a; }
+.badge--inativo { background: #64748b; }
+/* imóvel desativado: some do site público, mas continua no painel */
+.table tbody tr.is-off { background: rgba(100, 116, 139, .08); }
 .price { font-weight: 700; white-space: nowrap; }
 /* Código de referência do imóvel (clicar copia) */
 .table td.cell-code { white-space: nowrap; padding-left: 10px; padding-right: 10px; }

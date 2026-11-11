@@ -53,6 +53,7 @@
       const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY);
       const { data, error } = await sb.from('imoveis')
         .select('*')
+        .eq('ativo', true)          /* desativados no painel não aparecem aqui */
         .order('criado_em', { ascending: false })
         .order('codigo', { ascending: true });
       if (error) throw error;

@@ -57,17 +57,13 @@ só dígitos, ex.: `5511987654321`).
 
 ## Painel administrativo (`admin.html`)
 - Link no rodapé do site: **Área do corretor**.
-- **Acesso:** na primeira abertura o painel pede para **criar uma senha**
-  (mínimo de 8 caracteres). Não existe senha no código: fica gravado só o
-  hash com sal (`SHA-256` iterado), na chave `vivalar_admin_cred`.
-- **Proteções:** sessão de 30 min (renovada ao usar), bloqueio automático
-  após 15 minutos sem uso e bloqueio de 30 s após 5 senhas erradas.
-- **Esqueceu a senha?** No console do navegador:
-  `localStorage.removeItem('vivalar_admin_cred');`
-  — reabre a criação de senha e **não** apaga os imóveis.
+- **Acesso:** e-mail + senha (Supabase Auth). Quem cria as contas é o
+  **admin**, na aba **Usuários** do próprio painel.
+- **Abas:** *Catálogo* (todos os usuários), *Histórico* e *Usuários*
+  (somente o admin).
 - Permite **cadastrar, editar e excluir** imóveis (com upload de até
-  5 fotos por imóvel, otimizadas automaticamente).
-- As alterações são salvas no navegador (`localStorage`) e aparecem
-  no site na hora, sem mexer no código.
-- Botão **Restaurar padrão** descarta as alterações e volta ao
-  catálogo original (`js/dados.js`).
+  5 fotos por imóvel, enviadas ao Supabase Storage).
+- **Ativar/Desativar:** o botão na linha do imóvel tira-o do site
+  público sem apagar o cadastro — ele continua no painel e pode ser
+  reativado quando quiser. Por padrão todo imóvel nasce **ativo**.
+- Os dados ficam no Supabase e o site público lê o mesmo banco.

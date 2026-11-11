@@ -50,6 +50,7 @@ create table if not exists public.imoveis (
   vagas        integer not null default 0,
   destaque     boolean not null default false,
   novo         boolean not null default false,
+  ativo        boolean not null default true,   -- false = escondido do site
   cor          jsonb,               -- ["#0e7c66","#14b8a6"]
   descricao    text,                -- o "desc" do formulario (desc = palavra reservada do SQL)
   feats        jsonb,               -- ["Piscina","Varanda gourmet"]
@@ -61,6 +62,10 @@ create table if not exists public.imoveis (
 );
 
 comment on column public.imoveis.fotos is 'Array de strings. Aceita caminho local (assets/img/...) e URL do Storage no mesmo imovel.';
+
+/* bancos criados antes da coluna `ativo` ganham ela aqui (idempotente) */
+alter table public.imoveis
+  add column if not exists ativo boolean not null default true;
 
 
 /* -----------------------------------------------------------------
@@ -231,10 +236,11 @@ alter table public.imoveis  enable row level security;
 alter table public.perfis   enable row level security;
 alter table public.audit_log enable row level security;
 
--- imoveis: o site publico LE; quem esta logado CRUDA
+-- imoveis: visitante LE so os ATIVOS; quem esta logado ve todos e CRUDA
 drop policy if exists "imoveis_select" on public.imoveis;
 create policy "imoveis_select" on public.imoveis
-  for select to anon, authenticated using (true);
+  for select to anon, authenticated
+  using (ativo = true or auth.uid() is not null);
 
 drop policy if exists "imoveis_insert" on public.imoveis;
 create policy "imoveis_insert" on public.imoveis

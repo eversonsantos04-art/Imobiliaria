@@ -383,7 +383,8 @@
     tbody.innerHTML = list.length ? list.map((im) => {
       const capa = capaDe(im);
       const cor = im.cor || ['#0e7c66', '#14b8a6'];
-      return `<tr>
+      const ativo = im.ativo !== false;   /* padrão: aparece no site */
+      return `<tr${ativo ? '' : ' class="is-off"'}>
         <td class="cell-nolabel"><div class="cell-main">
           <span class="thumb" style="background:linear-gradient(135deg, ${cor[0]}, ${cor[1]})">${capa ? `<img src="${capa}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
           <div><strong>${esc(im.titulo)}</strong><span>${esc(im.bairro || '')} · ${esc(im.cidade || '')}/${esc(im.uf || '')}</span></div>
@@ -394,12 +395,14 @@
         <td data-label="Tipo">${esc(im.tipo || '—')}</td>
         <td data-label="Operação"><span class="badge badge--${im.operacao}">${im.operacao === 'venda' ? 'Venda' : 'Aluguel'}</span></td>
         <td data-label="Preço" class="price">${precoTxt(im)}</td>
+        <td data-label="Status"><span class="badge badge--${ativo ? 'ativo' : 'inativo'}">${ativo ? 'Ativo' : 'Inativo'}</span></td>
         <td data-label="Ações" class="cell-actions cell-nolabel">
           <button class="btn btn--outline btn--sm" data-act="edit" data-id="${esc(im.id)}" type="button">Editar</button>
+          <button class="btn btn--outline btn--sm" data-act="toggle" data-id="${esc(im.id)}" data-ativo="${ativo}" type="button" title="${ativo ? 'Sai do site, continua no painel' : 'Volta a aparecer no site'}">${ativo ? 'Desativar' : 'Ativar'}</button>
           <button class="btn btn--danger btn--sm" data-act="del" data-id="${esc(im.id)}" type="button">Excluir</button>
         </td>
       </tr>`;
-    }).join('') : `<tr class="empty-row"><td colspan="6">Nenhum imóvel encontrado. Clique em “Novo imóvel” para começar.</td></tr>`;
+    }).join('') : `<tr class="empty-row"><td colspan="7">Nenhum imóvel encontrado. Clique em “Novo imóvel” para começar.</td></tr>`;
   }
   $('#q').addEventListener('input', renderTable);
   $('#fOp').addEventListener('change', renderTable);
@@ -411,7 +414,32 @@
     const id = btn.dataset.id;
     if (act === 'edit') openForm(id);
     else if (act === 'del') askDelete(id);
+    else if (act === 'toggle') alternarAtivo(btn);
   });
+
+  /* Ativar/Desativar: tira do site público sem apagar o cadastro.
+     Grava a coluna `ativo` — a RLS do site público só devolve os
+     ativos, e o painel continua vendo todos. */
+  async function alternarAtivo(btn) {
+    if (!sb) { toast('Sem conexão com o Supabase — nada foi alterado.'); return; }
+    const id = btn.dataset.id;
+    const novo = btn.dataset.ativo !== 'true';      /* vira o oposto */
+    const tr = btn.closest('tr');
+    const forte = tr && tr.querySelector('strong');
+    const nome = (forte && forte.textContent) || 'Imóvel';
+    btn.disabled = true;
+    try {
+      const { error } = await sb.from(TABELA).update({ ativo: novo }).eq('id', id);
+      if (error) throw traduzErro(error);
+      toast(novo
+        ? `${nome} está visível no site.`
+        : `${nome} saiu do site (continua cadastrado no painel).`);
+      atualizarVista();
+    } catch (err) {
+      toast(err.message || 'Não foi possível alterar o status.');
+      btn.disabled = false;
+    }
+  }
 
   /* Copia o código do imóvel (com fallback para páginas abertas via file://) */
   function copiarCodigo(txt) {
@@ -474,36 +502,6 @@
       atualizarVista();
     });
   }
-
-  /* Restaurar padrão: apaga tudo e recoloca a semente de 12 imóveis.
-     O audit_log preserva todas as linhas apagadas. */
-  $('#btnReset').addEventListener('click', () => {
-    ask('Descartar TODOS os imóveis e voltar ao catálogo original (12 imóveis)? O histórico é mantido.', async () => {
-      try {
-        if (sb) {
-          const { error: erroApagar } = await sb.from(TABELA)
-            .delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          if (erroApagar) throw traduzErro(erroApagar);
-
-          const bruta = (window.VivaLarSeed || []).map((s) => {
-            const { id, ...semId } = s;
-            return { ...semId, fotos: [1, 2, 3].map((n) => `assets/img/imovel-${id}-${n}.jpg`) };
-          });
-          const codigos = window.VivaLarCodigos;
-          const semente = (codigos ? codigos.normalizar(bruta) : bruta).map(paraLinha);
-          if (semente.length) {
-            const { error: erroIns } = await sb.from(TABELA).insert(semente);
-            if (erroIns) throw traduzErro(erroIns);
-          }
-        }
-        try { localStorage.removeItem(CHAVE); } catch (_) {}
-        toast('Catálogo original restaurado.');
-      } catch (err) {
-        toast(err.message || 'Não foi possível restaurar.');
-      }
-      atualizarVista();
-    });
-  });
 
   /* ---------- Formulário (novo / editar) ---------- */
   let editId = null;
