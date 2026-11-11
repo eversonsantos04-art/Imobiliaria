@@ -44,6 +44,12 @@
 
     <!-- ===== Dashboard ===== -->
     <section id="dashView" hidden>
+      <div class="tabs" role="tablist" aria-label="Seções do painel">
+        <button class="tab is-on" id="tabCatalogo" type="button" role="tab" aria-selected="true" aria-controls="viewCatalogo">Catálogo</button>
+        <button class="tab" id="tabHistorico" type="button" role="tab" aria-selected="false" aria-controls="viewHistorico">Histórico</button>
+      </div>
+
+      <div id="viewCatalogo" role="tabpanel" aria-labelledby="tabCatalogo">
       <div class="stats">
         <div class="stat"><span>Total de imóveis</span><strong id="stTotal">0</strong></div>
         <div class="stat"><span>À venda</span><strong id="stVenda">0</strong></div>
@@ -70,8 +76,43 @@
           </thead>
           <tbody id="tbody"></tbody>
         </table>
-      </div>
-    </section>
+        </div><!-- /tablewrap -->
+      </div><!-- /viewCatalogo -->
+
+        <!-- ===== Histórico (audit_log — escrito só pelo banco) ===== -->
+        <div id="viewHistorico" role="tabpanel" aria-labelledby="tabHistorico" hidden>
+          <div class="hist__head">
+            <div>
+              <h2>Histórico</h2>
+              <p class="muted">Quem cadastrou, alterou e excluiu. É gravado pelo próprio banco — nenhum usuário consegue editar ou apagar.</p>
+            </div>
+            <span class="hist__count" id="histCount" role="status" aria-live="polite"></span>
+          </div>
+
+          <div class="toolbar">
+            <input type="search" id="hq" placeholder="Buscar por imóvel, código, cidade ou responsável…" aria-label="Buscar no histórico">
+            <select id="hAcao" aria-label="Filtrar por tipo de ação">
+              <option value="">Todas as ações</option>
+              <option value="INSERT">Cadastros</option>
+              <option value="UPDATE">Alterações</option>
+              <option value="DELETE">Exclusões</option>
+            </select>
+            <button class="btn btn--ghost" id="histAtualizar" type="button">Atualizar</button>
+          </div>
+
+          <div class="tablewrap">
+            <table class="table table--hist">
+              <thead>
+                <tr><th>Data e hora</th><th>Ação</th><th>Imóvel</th><th>Responsável</th><th>Detalhes</th></tr>
+              </thead>
+              <tbody id="histBody"></tbody>
+            </table>
+          </div>
+          <div class="hist__more">
+            <button class="btn btn--outline" id="histMais" type="button" hidden>Carregar mais</button>
+          </div>
+        </div><!-- /viewHistorico -->
+      </section>
   </main>
 
   <!-- ===== Modal formulário ===== -->

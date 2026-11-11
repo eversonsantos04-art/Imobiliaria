@@ -236,7 +236,7 @@
     loginView.hidden = true;
     dashView.hidden = false;
     btnSair.hidden = false;
-    renderTable();
+    mostrarAba(abaAtual);
     ultimoUso = Date.now();
     renovarLock();
   }
@@ -421,7 +421,7 @@
       } catch (err) {
         toast(err.message || 'Não foi possível excluir.');
       }
-      renderTable();
+      atualizarVista();
     });
   }
 
@@ -451,7 +451,7 @@
       } catch (err) {
         toast(err.message || 'Não foi possível restaurar.');
       }
-      renderTable();
+      atualizarVista();
     });
   });
 
@@ -630,8 +630,202 @@
     }
 
     closeModal($('#formModal'));
-    renderTable();
+    atualizarVista();
     toast(ehNovo ? `Imóvel cadastrado! Código ${finalCodigo}` : 'Alterações salvas!');
+  });
+
+  /* ---------- Histórico (audit_log) ----------
+     Leitura direta da tabela audit_log. A escrita é feita por trigger
+     no banco (supabase/schema.sql), então ninguém consegue forjar. */
+  let abaAtual = 'catalogo';
+  const H_TAM = 50;              /* linhas por página */
+  let histCarregadas = 0;
+  let histFim = false;
+  let histNomes = null;          /* mapa de id -> nome (tabela perfis) */
+
+  /* Metadados que mudam em toda edição e só poluem o diff */
+  const SEM_CAMPOS = new Set(['alterado_em', 'alterado_por', 'criado_em', 'cor']);
+  const ROTULOS = {
+    codigo: 'Código', titulo: 'Título', tipo: 'Tipo', operacao: 'Operação',
+    preco: 'Preço', area: 'Área', cidade: 'Cidade', bairro: 'Bairro', uf: 'UF',
+    quartos: 'Quartos', vagas: 'Vagas', destaque: 'Destaque', novo: 'Novo',
+    descricao: 'Descrição', feats: 'Diferenciais', fotos: 'Fotos', criado_por: 'Criado por',
+  };
+
+  function mostrarAba(qual) {
+    abaAtual = qual === 'historico' ? 'historico' : 'catalogo';
+    const ehHist = abaAtual === 'historico';
+    $('#viewCatalogo').hidden = ehHist;
+    $('#viewHistorico').hidden = !ehHist;
+    $('#tabCatalogo').classList.toggle('is-on', !ehHist);
+    $('#tabHistorico').classList.toggle('is-on', ehHist);
+    $('#tabCatalogo').setAttribute('aria-selected', String(!ehHist));
+    $('#tabHistorico').setAttribute('aria-selected', String(ehHist));
+    if (ehHist) carregarHistorico(true);
+    else renderTable();
+  }
+
+  /* Chamado depois de cada cadastro/edição/exclusão */
+  function atualizarVista() {
+    if (abaAtual === 'historico') carregarHistorico(true);
+    else renderTable();
+  }
+
+  function quandoTxt(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  function valorDe(campo, v) {
+    if (v === null || v === undefined || v === '') return '—';
+    if (campo === 'preco') return BRL.format(+v || 0);
+    if (campo === 'area') return `${v} m²`;
+    if (campo === 'operacao') return v === 'aluguel' ? 'Aluguel' : 'Venda';
+    if (campo === 'fotos') return Array.isArray(v) ? `${v.length} foto${v.length === 1 ? '' : 's'}` : '—';
+    if (campo === 'feats') return Array.isArray(v) ? `${v.length} diferencial${v.length === 1 ? '' : 'is'}` : '—';
+    if (Array.isArray(v)) return v.join(', ');
+    if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+    return String(v);
+  }
+
+  /* Campos diferentes entre a versão antiga e a nova (UPDATE) */
+  function oQueMudou(antes, depois) {
+    if (!antes || !depois) return [];
+    const chaves = new Set([...Object.keys(antes), ...Object.keys(depois)]);
+    const fora = [];
+    chaves.forEach((k) => {
+      if (SEM_CAMPOS.has(k)) return;
+      if (JSON.stringify(antes[k] ?? null) === JSON.stringify(depois[k] ?? null)) return;
+      fora.push({ k, de: valorDe(k, antes[k]), para: valorDe(k, depois[k]) });
+    });
+    return fora;
+  }
+
+  async function carregarNomes() {
+    if (histNomes) return histNomes;
+    histNomes = {};
+    if (!sb) return histNomes;
+    try {
+      const { data, error } = await sb.from('perfis').select('id, nome');
+      if (!error && Array.isArray(data)) data.forEach((p) => { histNomes[p.id] = p.nome; });
+    } catch (_) { /* sem nome, mostramos só o e-mail */ }
+    return histNomes;
+  }
+
+  function badgeAcao(a) {
+    if (a === 'INSERT') return '<span class="badge badge--insert">Cadastrou</span>';
+    if (a === 'UPDATE') return '<span class="badge badge--update">Alterou</span>';
+    return '<span class="badge badge--delete">Excluiu</span>';
+  }
+
+  function quemTxt(r) {
+    const email = r.usuario_email || '—';
+    const nome = r.usuario_id && histNomes ? histNomes[r.usuario_id] : '';
+    if (nome) return `<div class="hist__what"><strong>${esc(nome)}</strong><span>${esc(email)}</span></div>`;
+    return `<div class="hist__what"><strong>${esc(email)}</strong>${email === 'sistema' ? '<span>Ação feita direto no banco (SQL)</span>' : ''}</div>`;
+  }
+
+  function linhaHistorico(r) {
+    const reg = r.dados_novos || r.dados_antigos || {};
+    const titulo = reg.titulo || 'Registro removido';
+    const codigo = reg.codigo || '—';
+    let detalhes;
+    if (r.acao === 'UPDATE') {
+      const mudou = oQueMudou(r.dados_antigos, r.dados_novos);
+      detalhes = mudou.length
+        ? `<div class="hist__diff">${mudou.map((m) => `<span><b>${esc(ROTULOS[m.k] || m.k)}:</b> <s>${esc(m.de)}</s> → ${esc(m.para)}</span>`).join('')}</div>`
+        : '<span class="muted">Somente metadados internos</span>';
+    } else if (r.acao === 'INSERT') {
+      detalhes = `<span class="muted">${esc(valorDe('operacao', reg.operacao))} · ${esc(valorDe('preco', reg.preco))}</span>`;
+    } else {
+      detalhes = `<span class="muted">${esc(reg.cidade || '—')}/${esc(reg.uf || '')} · ${esc(valorDe('preco', reg.preco))}</span>`;
+    }
+    return `<tr>
+      <td data-label="Data">${esc(quandoTxt(r.em))}</td>
+      <td data-label="Ação">${badgeAcao(r.acao)}</td>
+      <td data-label="Imóvel"><div class="hist__what"><strong>${esc(titulo)}</strong><span>${esc(codigo)}</span></div></td>
+      <td data-label="Responsável">${quemTxt(r)}</td>
+      <td data-label="Detalhes">${detalhes}</td>
+    </tr>`;
+  }
+
+  async function carregarHistorico(reset = false) {
+    if (!sb) return;
+    const alvo = $('#histBody');
+    if (reset) {
+      histCarregadas = 0;
+      histFim = false;
+      alvo.innerHTML = '<tr class="empty-row"><td colspan="5">Carregando…</td></tr>';
+      $('#histMais').hidden = true;
+    }
+    if (histFim) return;
+
+    const q = $('#hq').value.trim();
+    const acao = $('#hAcao').value;
+
+    try {
+      await carregarNomes();
+
+      let query = sb.from('audit_log')
+        .select('id, acao, registro_id, dados_novos, dados_antigos, usuario_id, usuario_email, em', { count: reset ? 'exact' : 'none' })
+        .order('em', { ascending: false })
+        .order('id', { ascending: false })
+        .range(histCarregadas, histCarregadas + H_TAM - 1);
+
+      if (acao) query = query.eq('acao', acao);
+
+      /* Busca por texto (título, código, cidade, responsável) */
+      const padrao = q ? q.replace(/[,%_()]/g, '').replace(/\s+/g, '%') : '';
+      if (padrao) {
+        query = query.or([
+          'dados_novos->>titulo', 'dados_novos->>codigo', 'dados_novos->>cidade',
+          'dados_antigos->>titulo', 'dados_antigos->>codigo', 'dados_antigos->>cidade',
+          'usuario_email',
+        ].map((c) => `${c}.ilike.%${padrao}%`).join(','));
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw traduzErro(error);
+
+      const linhas = Array.isArray(data) ? data : [];
+      const html = linhas.map(linhaHistorico).join('');
+
+      if (reset) {
+        alvo.innerHTML = html || '<tr class="empty-row"><td colspan="5">Nenhuma ação encontrada.</td></tr>';
+      } else if (html) {
+        const vazio = alvo.querySelector('.empty-row');
+        if (vazio) vazio.remove();
+        alvo.insertAdjacentHTML('beforeend', html);
+      } else {
+        alvo.insertAdjacentHTML('beforeend', '<tr class="empty-row"><td colspan="5">Fim do histórico.</td></tr>');
+      }
+
+      histCarregadas += linhas.length;
+      histFim = linhas.length < H_TAM;
+      $('#histMais').hidden = histFim;
+      if (reset) {
+        $('#histCount').textContent = typeof count === 'number'
+          ? `${count} ${count === 1 ? 'ação' : 'ações'} registradas`
+          : `${histCarregadas} ações`;
+      }
+    } catch (e) {
+      alvo.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(e.message || 'Não foi possível carregar o histórico.')}</td></tr>`;
+      $('#histMais').hidden = true;
+    }
+  }
+
+  $('#tabCatalogo').addEventListener('click', () => mostrarAba('catalogo'));
+  $('#tabHistorico').addEventListener('click', () => mostrarAba('historico'));
+  $('#histMais').addEventListener('click', () => carregarHistorico(false));
+  $('#histAtualizar').addEventListener('click', () => carregarHistorico(true));
+  $('#hAcao').addEventListener('change', () => carregarHistorico(true));
+  let hTimer = null;
+  $('#hq').addEventListener('input', () => {
+    clearTimeout(hTimer);
+    hTimer = setTimeout(() => carregarHistorico(true), 350);
   });
 
   /* ---------- Init ---------- */

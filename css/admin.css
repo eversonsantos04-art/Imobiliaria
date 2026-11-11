@@ -159,6 +159,33 @@ textarea { resize: vertical; }
   padding: .85rem 1.5rem; border-radius: 12px; box-shadow: var(--shadow);
 }
 
+/* ---------- Abas do painel ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab {
+  border: 0; background: transparent; font: inherit; font-weight: 700; font-size: .95rem;
+  color: var(--muted); padding: 10px 16px; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--text); }
+.tab.is-on { color: var(--brand); border-bottom-color: var(--brand); }
+
+/* ---------- Histórico ---------- */
+.hist__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 6px; flex-wrap: wrap; }
+.hist__head h2 { font-size: 1.15rem; margin: 0 0 4px; }
+.hist__head p { margin: 0; max-width: 64ch; }
+.hist__count { color: var(--muted); font-size: .87rem; font-weight: 600; white-space: nowrap; }
+.table--hist { min-width: 880px; }
+.hist__what { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.hist__what strong { font-size: .9rem; }
+.hist__what span { font-size: .78rem; color: var(--muted); }
+.hist__diff { display: flex; flex-direction: column; gap: 3px; font-size: .8rem; color: var(--muted); }
+.hist__diff b { color: var(--text); font-weight: 600; }
+.hist__diff s { text-decoration: line-through; opacity: .7; }
+.hist__more { display: flex; justify-content: center; margin-top: 16px; }
+.badge--insert { background: #0e7c66; }
+.badge--update { background: #b45309; }
+.badge--delete { background: #be123c; }
+
 @media (max-width: 860px) {
   .stats { grid-template-columns: 1fr 1fr; }
   .grid2, .grid3 { grid-template-columns: 1fr; }
