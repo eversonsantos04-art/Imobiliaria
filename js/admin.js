@@ -898,14 +898,20 @@
       ? '<span class="badge badge--insert">Admin</span>'
       : '<span class="badge badge--corretor">Corretor</span>';
     const souEu = String(u.id) === String(usuarioAtualId);
+    /* Na própria linha não aparece ação nenhuma: o admin não se
+       rebaixa, não se edita e não se exclui (isso também é
+       conferido lá dentro no banco). */
+    const acoes = souEu
+      ? '<span class="usr-eu">sua conta</span>'
+      : `<button class="btn btn--outline btn--sm" data-usr="papel" data-id="${esc(u.id)}" type="button">${u.papel === 'admin' ? 'Virar corretor' : 'Virar admin'}</button>
+         <button class="btn btn--outline btn--sm" data-usr="editar" data-id="${esc(u.id)}" type="button">Editar</button>
+         <button class="btn btn--danger btn--sm" data-usr="excluir" data-id="${esc(u.id)}" type="button">Excluir</button>`;
     return `<tr>
       <td data-label="Usuário"><div class="hist__what">
         <strong>${esc(u.nome || '—')}</strong><span>${esc(u.email || '')}</span></div></td>
       <td data-label="Papel">${papel}</td>
       <td data-label="Criado em">${esc(quandoTxt(u.criado_em))}</td>
-      <td data-label="Ações" class="cell-actions cell-nolabel">
-        <button class="btn btn--outline btn--sm" data-usr="papel" data-id="${esc(u.id)}" type="button"${souEu ? ' disabled title="Você não pode alterar a própria conta"' : ''}>${u.papel === 'admin' ? 'Virar corretor' : 'Virar admin'}</button>
-      </td>
+      <td data-label="Ações" class="cell-actions cell-nolabel">${acoes}</td>
     </tr>`;
   }
 
@@ -928,12 +934,17 @@
     }
   }
 
-  /* Papel: admin <-> corretor (não deixa rebaixar a si mesmo) */
+  /* Clicar nas ações da linha: papel, editar ou excluir */
   $('#usrBody').addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-usr="papel"]');
+    const btn = e.target.closest('button[data-usr]');
     if (!btn || btn.disabled) return;
     const u = usrCache.find((x) => String(x.id) === String(btn.dataset.id));
     if (!u) return;
+
+    if (btn.dataset.usr === 'editar') { abrirEdicao(u); return; }
+    if (btn.dataset.usr === 'excluir') { pedirExclusao(u); return; }
+
+    /* Papel: admin <-> corretor */
     const novo = u.papel === 'admin' ? 'corretor' : 'admin';
     btn.disabled = true;
     try {
@@ -949,17 +960,82 @@
     }
   });
 
-  /* Erros específicos da criação de usuário */
-  function traduzErroUsuario(error) {
+  /* ---------- Editar usuário (modal) ---------- */
+  let usrEditando = null;
+
+  function abrirEdicao(u) {
+    usrEditando = u;
+    $('#e_nome').value = u.nome || '';
+    $('#e_email').value = u.email || '';
+    $('#e_papel').value = u.papel === 'admin' ? 'admin' : 'corretor';
+    const err = $('#usrEditError');
+    err.hidden = true;
+    err.textContent = '';
+    openModal($('#usrModal'));
+    $('#e_nome').focus();
+  }
+
+  $('#usrForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!usrEditando) return;
+    const err = $('#usrEditError');
+    const nome = $('#e_nome').value.trim();
+    const email = $('#e_email').value.trim().toLowerCase();
+    const papel = $('#e_papel').value;
+
+    let msg = '';
+    if (nome.length < 2) msg = 'Informe o nome do usuário.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) msg = 'Informe um e-mail válido.';
+    if (msg) { err.textContent = msg; err.hidden = false; return; }
+    err.hidden = true;
+
+    const btn = $('#usrSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Salvando…';
+    try {
+      /* nome/e-mail/papel passam pela função do banco
+         (supabase/usuarios_crud.sql) — ela confere ser admin */
+      const { error } = await sb.rpc('atualizar_usuario', {
+        p_id: usrEditando.id, p_email: email, p_nome: nome, p_papel: papel,
+      });
+      if (error) throw traduzErroUsuario(error, 'atualizar_usuario');
+      closeModal($('#usrModal'));
+      toast(`Dados de ${nome} atualizados.`);
+      carregarUsuarios(true);
+    } catch (erro) {
+      err.textContent = erro.message || 'Não foi possível salvar as alterações.';
+      err.hidden = false;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar alterações';
+    }
+  });
+
+  /* ---------- Excluir usuário (confirmação) ---------- */
+  function pedirExclusao(u) {
+    ask(`Excluir “${u.nome || u.email}” (${u.email})? A conta é apagada e ele perde o acesso. Os imóveis e o histórico ficam guardados.`, async () => {
+      try {
+        const { error } = await sb.rpc('excluir_usuario', { p_id: u.id });
+        if (error) throw traduzErroUsuario(error, 'excluir_usuario');
+        toast(`${u.nome || u.email} foi excluído.`);
+        carregarUsuarios(true);
+      } catch (err) {
+        toast(err.message || 'Não foi possível excluir o usuário.');
+      }
+    });
+  }
+
+  /* Erros das funções de usuário (criar / editar / excluir) */
+  function traduzErroUsuario(error, funcao = 'criar_usuario') {
     const m = String((error && error.message) || '');
     if (error && error.code === '23505') return new Error('Já existe um usuário com esse e-mail.');
     if (/already been registered|duplicate key/i.test(m)) return new Error('Já existe um usuário com esse e-mail.');
     if (/could not find the function|PGRST202/i.test(m)) {
-      return new Error('Função “criar_usuario” não existe. Rode o supabase/usuarios.sql no SQL Editor.');
+      return new Error(`A função “${funcao}” ainda não existe. Rode os arquivos supabase/usuarios.sql e supabase/usuarios_crud.sql no SQL Editor.`);
     }
-    if (/apenas o administrador/i.test(m)) return new Error('Só o administrador pode criar usuários.');
-    if (/failed to fetch|networkerror/i.test(m)) return new Error('Sem conexão com o Supabase — nada foi criado.');
-    return new Error(m || 'Não foi possível criar o usuário.');
+    if (/failed to fetch|networkerror/i.test(m)) return new Error('Sem conexão com o Supabase — nada foi alterado.');
+    /* mensagens em português levantadas pelo próprio banco passam direto */
+    return new Error(m || 'Não foi possível completar a operação.');
   }
 
   /* Criar usuário: passa pela função do banco (a segurança está lá) */

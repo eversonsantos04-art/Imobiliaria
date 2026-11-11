@@ -201,7 +201,8 @@ textarea { resize: vertical; }
 .badge--delete { background: #be123c; }
 
 /* ---------- Usuários (só admin) ---------- */
-.table--usr { min-width: 720px; }
+.table--usr { min-width: 900px; }
+.usr-eu { color: var(--muted); font-size: .78rem; font-style: italic; }
 .badge--corretor { background: #475569; }
 .panelcard {
   background: var(--surface); border: 1px solid var(--border);
