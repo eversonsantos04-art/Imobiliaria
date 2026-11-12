@@ -1,8 +1,8 @@
 /* Corretores de Imóveis — Painel administrativo */
 :root {
-  --brand: #0e7c66;
-  --brand-strong: #0a6352;
-  --accent: #e8a33d;
+  --brand: #eabd60;      /* ouro médio — cor principal do logo */
+  --brand-strong: #a9711e; /* bronze — hover e gradientes */
+  --accent: #fdf3ac;     /* dourado claro — destaques */
   --danger: #dc2626;
   --bg: #f4f7f6;
   --surface: #ffffff;
@@ -24,10 +24,10 @@ a { color: inherit; }
 /* Topbar */
 .topbar { background: #0c1513; color: #e7efec; position: sticky; top: 0; z-index: 50; }
 .topbar__inner { width: min(1180px, 94%); margin-inline: auto; display: flex; align-items: center; gap: 14px; padding: 14px 0; }
-.logo { display: inline-flex; align-items: center; gap: 9px; font: 800 1.2rem var(--font-head); text-decoration: none; }
+.logo { display: inline-flex; align-items: center; gap: 9px; font: 800 1.2rem var(--font-head); text-decoration: none; overflow: visible; min-width: 0; }
 .logo em { font-style: normal; color: #2fb99a; }
-/* Logo "Corretores de Imóveis" no topo do painel */
-.logo__img { display: block; width: clamp(120px, 28vw, 148px); height: auto; border-radius: 6px; }
+/* Logo "Corretores de Imóveis" no topo do painel — sem corte */
+.logo__img { display: block; width: auto; max-width: min(200px, 22vw); max-height: 55px; height: auto; }
 .logo__mark {
   width: 34px; height: 34px; border-radius: 10px; display: inline-flex;
   align-items: center; justify-content: center; font-weight: 800; color: #fff;
@@ -128,7 +128,7 @@ textarea { resize: vertical; }
 .cell-main strong { display: block; font-size: .92rem; }
 .cell-main span { font-size: .8rem; color: var(--muted); }
 .badge { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .28rem .65rem; border-radius: 999px; color: #fff; white-space: nowrap; }
-.badge--venda { background: #0e7c66; }
+.badge--venda { background: #a9711e; }
 .badge--aluguel { background: #7c3aed; }
 .badge--ativo { background: #16a34a; }
 .badge--inativo { background: #64748b; }
@@ -207,7 +207,7 @@ textarea { resize: vertical; }
 .hist__diff b { color: var(--text); font-weight: 600; }
 .hist__diff s { text-decoration: line-through; opacity: .7; }
 .hist__more { display: flex; justify-content: center; margin-top: 16px; }
-.badge--insert { background: #0e7c66; }
+.badge--insert { background: #eabd60; }
 .badge--update { background: #b45309; }
 .badge--delete { background: #be123c; }
 
